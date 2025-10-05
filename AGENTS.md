@@ -106,6 +106,7 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 ### Git Workflow
 - Use feature branches; follow Conventional Commit messages
 - Require PR review before merging into main
+- Track every SDD task as a GitHub issue using GitHub CLI (`gh issue` commands) and keep status in sync when tasks progress
 
 ### Other
 - Instrument key voice/chat flows with telemetry for future tuning
