@@ -1,7 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import { RealtimeAgent, RealtimeSession } from '@openai/agents/realtime';
+import styles from './chat-client.module.css';
 
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
@@ -77,54 +80,65 @@ export function ChatClient() {
   }, [session]);
 
   return (
-    <section
-      style={{
-        display: 'grid',
-        gap: '1.5rem',
-        padding: '2rem',
-        borderRadius: '1rem',
-        backgroundColor: 'rgba(0, 0, 0, 0.25)',
-        backdropFilter: 'blur(6px)',
-        maxWidth: '32rem',
-        width: '100%',
-      }}
-    >
-      <header>
-        <h1 style={{ margin: 0, fontSize: '2rem' }}>VibeChat</h1>
-        <p style={{ marginTop: '0.5rem', color: 'rgba(255, 255, 255, 0.75)' }}>
-          Kliknij „Connect”, żeby nawiązać połączenie w czasie rzeczywistym z asystentem.
-        </p>
-      </header>
+    <section className={styles.layout} aria-labelledby="chat-title">
+      <div className={styles.canvas}>
+        <header className={styles.header}>
+          <Typography id="chat-title" variant="h3" component="h1" className={styles.title}>
+            VibeChat
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Connect to start a realtime voice session or explore the workspace while we prepare new
+            modules.
+          </Typography>
+        </header>
 
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <button
-          type="button"
-          onClick={handleConnect}
-          disabled={status === 'connecting' || status === 'connected'}
-          style={{ flex: '1 1 0' }}
-        >
-          {status === 'connecting' ? 'Connecting…' : status === 'connected' ? 'Connected' : 'Connect'}
-        </button>
-        <button
-          type="button"
-          onClick={handleDisconnect}
-          disabled={status !== 'connected'}
-          style={{ flex: '1 1 0' }}
-        >
-          Disconnect
-        </button>
+        <div className={styles.surface} role="presentation">
+          <Typography variant="body2" color="text.secondary">
+            Voice interaction canvas reserved for upcoming live session visualization.
+          </Typography>
+        </div>
+
+        <footer className={styles.status} aria-live="polite">
+          <Typography variant="body2">Status: {status}</Typography>
+          {error ? (
+            <Typography variant="body2" color="error">
+              Error: {error}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Allow microphone access when prompted to keep the session ready.
+            </Typography>
+          )}
+        </footer>
       </div>
 
-      <footer style={{ fontSize: '0.95rem', color: 'rgba(255, 255, 255, 0.85)' }}>
-        <p style={{ margin: 0 }}>Status: {status}</p>
-        {error ? (
-          <p style={{ margin: '0.5rem 0 0', color: '#ff9b9b' }}>Error: {error}</p>
-        ) : (
-          <p style={{ margin: '0.5rem 0 0', color: 'rgba(255, 255, 255, 0.65)' }}>
-            Przyznaj uprawnienia do mikrofonu, gdy przeglądarka o to poprosi.
-          </p>
-        )}
-      </footer>
+      <aside className={styles.controlRail} aria-label="Session controls">
+        <div className={styles.controlRailInner}>
+          <Typography component="h2" variant="subtitle2" className={styles.controlHeading}>
+            Controls
+          </Typography>
+          <div className={styles.controlStack}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleConnect}
+              disabled={status === 'connecting' || status === 'connected'}
+              fullWidth
+            >
+              {status === 'connecting' ? 'Connecting…' : status === 'connected' ? 'Connected' : 'Connect'}
+            </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={handleDisconnect}
+              disabled={status !== 'connected'}
+              fullWidth
+            >
+              Disconnect
+            </Button>
+          </div>
+        </div>
+      </aside>
     </section>
   );
 }
