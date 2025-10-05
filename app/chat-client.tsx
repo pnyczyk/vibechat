@@ -3,38 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RealtimeAgent, RealtimeSession } from '@openai/agents/realtime';
 
-import type { RealtimeSessionEventTypes } from '@openai/agents/realtime';
-
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error';
-
-type EventName = keyof RealtimeSessionEventTypes;
-
-const OBSERVED_EVENTS: EventName[] = [
-  'agent_start',
-  'agent_end',
-  'agent_handoff',
-  'agent_tool_start',
-  'agent_tool_end',
-  'transport_event',
-  'audio_start',
-  'audio',
-  'audio_stopped',
-  'audio_interrupted',
-  'guardrail_tripped',
-  'history_updated',
-  'history_added',
-  'error',
-  'tool_approval_requested',
-  'mcp_tool_call_completed',
-  'mcp_tools_changed',
-];
-
-function formatKeyPreview(key: string) {
-  if (key.length <= 10) {
-    return key;
-  }
-  return `${key.slice(0, 6)}…${key.slice(-4)}`;
-}
 
 export function ChatClient() {
   const [status, setStatus] = useState<ConnectionStatus>('idle');
@@ -42,45 +11,12 @@ export function ChatClient() {
   const [session, setSession] = useState<RealtimeSession | null>(null);
 
   useEffect(() => {
-    if (!session) {
-      return undefined;
-    }
-
-    const emitter = session as unknown as {
-      on: (event: string, handler: (...args: unknown[]) => void) => void;
-      off?: (event: string, handler: (...args: unknown[]) => void) => void;
-    };
-
-    const detachFns = OBSERVED_EVENTS.map((event) => {
-      const handler = (...args: unknown[]) => {
-        const logger = event === 'error' ? console.error : event.startsWith('audio') ? console.debug : console.log;
-        logger(`[Realtime][${event}]`, ...args);
-      };
-      emitter.on(event, handler);
-      return () => emitter.off?.(event, handler);
-    });
-
-    console.log('[Realtime] event listeners attached');
-
     return () => {
-      detachFns.forEach((detach) => detach?.());
-      console.log('[Realtime] event listeners detached, closing session');
-      session.close();
+      session?.close();
     };
   }, [session]);
 
-  useEffect(() => {
-    console.log('[Realtime] status changed ->', status);
-  }, [status]);
-
-  useEffect(() => {
-    if (error) {
-      console.warn('[Realtime] error state ->', error);
-    }
-  }, [error]);
-
   const agent = useMemo(() => {
-    console.log('[Realtime] constructing agent instance');
     return new RealtimeAgent({
       name: 'Assistant',
       instructions: 'Mów po polsku i odpowiadaj głosem. Bądź serdeczny.',
@@ -89,12 +25,10 @@ export function ChatClient() {
 
   const handleConnect = useCallback(async () => {
     if (status === 'connecting' || status === 'connected') {
-      console.log('[Realtime] connect requested while already active, ignoring');
       return;
     }
 
     if (session) {
-      console.log('[Realtime] closing previous session before reconnect');
       session.close();
       setSession(null);
     }
@@ -103,7 +37,6 @@ export function ChatClient() {
     setStatus('connecting');
 
     try {
-      console.log('[Realtime] requesting realtime token…');
       const response = await fetch('/api/realtime-token');
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -115,26 +48,16 @@ export function ChatClient() {
       }
 
       const secret = await response.json();
-      console.log('[Realtime] token payload received', secret);
-
       const apiKey = typeof secret?.value === 'string' ? secret.value : secret?.client_secret?.value;
       if (!apiKey) {
         throw new Error('Realtime token response missing value');
       }
 
-      console.log('[Realtime] using ephemeral key', formatKeyPreview(apiKey));
-
       const newSession = new RealtimeSession(agent, {
-        model: 'gpt-4o-realtime-preview-2025-06-03',
-        config: {
-          turnDetection: { type: 'semantic_vad', createResponse: true },
-          modalities: ['text', 'audio'],
-        },
+        model: 'gpt-realtime',
       });
 
-      console.log('[Realtime] created session, connecting…');
       await newSession.connect({ apiKey });
-      console.log('[Realtime] session.connect resolved');
       setSession(newSession);
       setStatus('connected');
     } catch (err) {
@@ -146,10 +69,8 @@ export function ChatClient() {
 
   const handleDisconnect = useCallback(() => {
     if (!session) {
-      console.log('[Realtime] disconnect requested without active session');
       return;
     }
-    console.log('[Realtime] disconnecting session');
     session.close();
     setSession(null);
     setStatus('idle');
