@@ -1,57 +1,18 @@
 :root {
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 html,
 body {
   margin: 0;
-  min-height: 100vh;
-  background-color: inherit;
+  min-height: 100%;
 }
 
 a {
   color: inherit;
-}
-
-button {
-  border-radius: 0.75rem;
-  border: 1px solid transparent;
-  padding: 0.65em 1.5em;
-  font-size: 1rem;
-  font-weight: 600;
-  background-image: linear-gradient(135deg, #646cff 0%, #9f66ff 100%);
-  color: #ffffff;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-}
-
-button:hover:enabled {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(100, 108, 255, 0.35);
-}
-
-button:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-
-  button {
-    color: #213547;
-    background-image: linear-gradient(135deg, #dbe4ff 0%, #b2d6ff 100%);
-  }
+  text-decoration: none;
 }

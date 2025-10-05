@@ -21,6 +21,11 @@ If Completed: ask "Task {task-id} already completed. Re-implement? (yes/no)"
 ### 5. Check Dependencies
 If dependencies incomplete, show: "Task {task-id} blocked by: T001, T003. Complete dependencies first." Stop execution.
 
+### 6. Confirm Git Workflow Alignment
+- Work from a feature branch named `feature/{feature-name}-{task-id}` (or equivalent). If on `main`, create the branch before continuing.
+- Ensure there is an open GitHub issue tracking the task (e.g., `[UI Overhaul] T001 ...`). Link subsequent commits/PR to that issue.
+- Plan to raise a PR from the feature branch back to `main` after changes pass review.
+
 ## Context Loading
 
 Load always:
@@ -37,6 +42,7 @@ Load always:
 - Address each acceptance criterion
 - Keep changes focused (this task only)
 - Quality code: meaningful names, comments for complex logic, error handling, edge cases
+- Reference the associated GitHub issue in commits/PR description per project rules.
 
 ### Testing
 - Use test framework from AGENTS.md
@@ -106,6 +112,8 @@ Summary: Created User model with validation and bcrypt hashing per security requ
 Notes (if any):
   • Rate limiting out of scope
   • Email service in T005
+
+Before handing off for review, open/prepare a PR from your feature branch referencing the GitHub issue; do not merge without review.
 ```
 
 ## User Review & Approval
