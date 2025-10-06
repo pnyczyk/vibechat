@@ -49,7 +49,7 @@ Restructure the main page into a predominantly white canvas with a reserved cont
 ---
 
 ## Task T003: Implement Connection Toggle Control
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002
 **Files:**
 - `app/chat-client.tsx`
@@ -71,7 +71,7 @@ Create a SessionControls component using MUI icons that toggles between connect 
 ---
 
 ## Task T004: Add Microphone Toggle Functionality
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T003
 **Files:**
 - `app/chat-client.tsx`

@@ -15,6 +15,7 @@ export function ChatClient() {
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SessionFeedback | null>(null);
+  const [muted, setMuted] = useState(false);
   const [session, setSession] = useState<RealtimeSession | null>(null);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export function ChatClient() {
 
     setError(null);
     setFeedback(null);
+    setMuted(false);
     setStatus("connecting");
 
     try {
@@ -72,6 +74,7 @@ export function ChatClient() {
       setSession(newSession);
       setStatus("connected");
       setFeedback({ message: "Connected to session", severity: "success" });
+      setMuted(Boolean(newSession.muted));
     } catch (err) {
       console.error("Failed to connect realtime session", err);
       setStatus("error");
@@ -86,8 +89,34 @@ export function ChatClient() {
     setSession(null);
     setStatus("idle");
     setError(null);
+    setMuted(false);
     setFeedback({ message: "Disconnected from session", severity: "success" });
   }, [session]);
+
+  const handleToggleMute = useCallback(() => {
+    if (!session) {
+      setFeedback({
+        message: "Connect to enable microphone",
+        severity: "error",
+      });
+      return;
+    }
+
+    try {
+      const nextMuted = !muted;
+      session.mute(nextMuted);
+      setMuted(nextMuted);
+      setFeedback({
+        message: nextMuted ? "Microphone muted" : "Microphone active",
+        severity: "success",
+      });
+    } catch (err) {
+      console.error("Failed to toggle microphone", err);
+      const message = err instanceof Error ? err.message : "Unexpected error";
+      setFeedback({ message, severity: "error" });
+      setError(message);
+    }
+  }, [muted, session]);
 
   const handleFeedbackClose = useCallback(() => {
     setFeedback(null);
@@ -138,6 +167,8 @@ export function ChatClient() {
             status={status}
             onConnect={handleConnect}
             onDisconnect={handleDisconnect}
+            muted={muted}
+            onToggleMute={handleToggleMute}
             feedback={feedback}
             onFeedbackClose={handleFeedbackClose}
           />
