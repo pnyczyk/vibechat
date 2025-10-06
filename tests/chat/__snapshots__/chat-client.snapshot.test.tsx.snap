@@ -36,6 +36,74 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
 }
 
 .emotion-5 {
+  background-color: #ffffff;
+  color: rgba(0, 0, 0, 0.87);
+  -webkit-transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+  transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+  border-radius: 4px;
+  box-shadow: var(--Paper-shadow);
+  background-image: var(--Paper-overlay);
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-radius: 12px;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 168px;
+  pointer-events: auto;
+}
+
+.emotion-6 {
+  margin: 0;
+  font-family: Roboto,Helvetica,Arial,sans-serif;
+  font-weight: 400;
+  font-size: 0.75rem;
+  line-height: 1.66;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.emotion-8 {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-align-items: center;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  -webkit-box-pack: justify;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
+}
+
+.emotion-9 {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  -webkit-transition: all 160ms ease;
+  transition: all 160ms ease;
+  background-color: #bdbdbd;
+  box-shadow: none;
+}
+
+.emotion-10 {
+  margin: 0;
+  font-family: Roboto,Helvetica,Arial,sans-serif;
+  font-weight: 400;
+  font-size: 0.75rem;
+  line-height: 1.66;
+  color: rgba(0, 0, 0, 0.38);
+  font-weight: 600;
+}
+
+.emotion-11 {
   display: -webkit-box;
   display: -webkit-flex;
   display: -ms-flexbox;
@@ -49,15 +117,15 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
   align-items: center;
 }
 
-.emotion-5>:not(style):not(style) {
+.emotion-11>:not(style):not(style) {
   margin: 0;
 }
 
-.emotion-5>:not(style)~:not(style) {
+.emotion-11>:not(style)~:not(style) {
   margin-top: 8px;
 }
 
-.emotion-6 {
+.emotion-12 {
   display: -webkit-inline-box;
   display: -webkit-inline-flex;
   display: -ms-inline-flexbox;
@@ -107,42 +175,42 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
   font-size: 1.75rem;
 }
 
-.emotion-6::-moz-focus-inner {
+.emotion-12::-moz-focus-inner {
   border-style: none;
 }
 
-.emotion-6.Mui-disabled {
+.emotion-12.Mui-disabled {
   pointer-events: none;
   cursor: default;
 }
 
 @media print {
-  .emotion-6 {
+  .emotion-12 {
     -webkit-print-color-adjust: exact;
     color-adjust: exact;
   }
 }
 
-.emotion-6:hover {
+.emotion-12:hover {
   background-color: var(--IconButton-hoverBg);
 }
 
 @media (hover: none) {
-  .emotion-6:hover {
+  .emotion-12:hover {
     background-color: transparent;
   }
 }
 
-.emotion-6.Mui-disabled {
+.emotion-12.Mui-disabled {
   background-color: transparent;
   color: rgba(0, 0, 0, 0.26);
 }
 
-.emotion-6.MuiIconButton-loading {
+.emotion-12.MuiIconButton-loading {
   color: transparent;
 }
 
-.emotion-7 {
+.emotion-13 {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
@@ -195,17 +263,56 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
       aria-live="polite"
       class="status"
     >
-      <p
-        class="MuiTypography-root MuiTypography-body2 emotion-3"
+      <div
+        class="statusText"
       >
-        Status: 
-        idle
-      </p>
-      <p
-        class="MuiTypography-root MuiTypography-body2 emotion-2"
+        <p
+          class="MuiTypography-root MuiTypography-body2 emotion-3"
+        >
+          Status: 
+          idle
+        </p>
+        <p
+          class="MuiTypography-root MuiTypography-body2 emotion-2"
+        >
+          Allow microphone access when prompted to keep the session ready.
+        </p>
+      </div>
+      <div
+        class="voiceMeterWrapper"
       >
-        Allow microphone access when prompted to keep the session ready.
-      </p>
+        <div
+          aria-label="Voice activity"
+          aria-live="polite"
+          class="MuiPaper-root MuiPaper-elevation MuiPaper-rounded MuiPaper-elevation6 emotion-5"
+          data-testid="voice-meter"
+          role="status"
+          style="--Paper-shadow: 0px 3px 5px -1px rgba(0,0,0,0.2),0px 6px 10px 0px rgba(0,0,0,0.14),0px 1px 18px 0px rgba(0,0,0,0.12);"
+        >
+          <span
+            class="MuiTypography-root MuiTypography-caption emotion-6"
+          >
+            Voice activity
+          </span>
+          <p
+            class="MuiTypography-root MuiTypography-body2 emotion-2"
+          >
+            Waiting for audio…
+          </p>
+          <div
+            class="MuiBox-root emotion-8"
+          >
+            <div
+              class="MuiBox-root emotion-9"
+            />
+            <span
+              class="MuiTypography-root MuiTypography-caption emotion-10"
+            >
+              Inactive
+            </span>
+          </div>
+        </div>
+      </div>
     </footer>
   </div>
   <aside
@@ -216,7 +323,7 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
       class="controlRailInner"
     >
       <div
-        class="MuiStack-root emotion-5"
+        class="MuiStack-root emotion-11"
         data-testid="session-controls"
       >
         <span
@@ -227,13 +334,13 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
           <button
             aria-label="Connect to session"
             aria-pressed="false"
-            class="MuiButtonBase-root MuiIconButton-root MuiIconButton-colorPrimary MuiIconButton-sizeLarge emotion-6"
+            class="MuiButtonBase-root MuiIconButton-root MuiIconButton-colorPrimary MuiIconButton-sizeLarge emotion-12"
             tabindex="0"
             type="button"
           >
             <svg
               aria-hidden="true"
-              class="MuiSvgIcon-root MuiSvgIcon-fontSizeInherit emotion-7"
+              class="MuiSvgIcon-root MuiSvgIcon-fontSizeInherit emotion-13"
               data-testid="PowerSettingsNewIcon"
               focusable="false"
               viewBox="0 0 24 24"
@@ -252,14 +359,14 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
           <button
             aria-label="Connect to enable microphone"
             aria-pressed="false"
-            class="MuiButtonBase-root Mui-disabled MuiIconButton-root Mui-disabled MuiIconButton-colorPrimary MuiIconButton-sizeLarge emotion-6"
+            class="MuiButtonBase-root Mui-disabled MuiIconButton-root Mui-disabled MuiIconButton-colorPrimary MuiIconButton-sizeLarge emotion-12"
             disabled=""
             tabindex="-1"
             type="button"
           >
             <svg
               aria-hidden="true"
-              class="MuiSvgIcon-root MuiSvgIcon-fontSizeInherit emotion-7"
+              class="MuiSvgIcon-root MuiSvgIcon-fontSizeInherit emotion-13"
               data-testid="MicIcon"
               focusable="false"
               viewBox="0 0 24 24"
