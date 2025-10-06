@@ -1,15 +1,9 @@
 import { ChatClient } from './chat-client';
+import styles from './chat-client.module.css';
 
 export default function HomePage() {
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        padding: '3rem',
-      }}
-    >
+    <main className={styles.main}>
       <ChatClient />
     </main>
   );
