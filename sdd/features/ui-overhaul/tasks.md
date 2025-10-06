@@ -27,7 +27,7 @@ Install Material UI and MUI Icons, configure a light theme provider, and replace
 ---
 
 ## Task T002: Scaffold Minimalist Canvas Layout
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T001
 **Files:**
 - `app/page.tsx`
