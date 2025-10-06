@@ -11,6 +11,8 @@ type RenderProps = {
   feedback?: SessionFeedback | null;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  muted?: boolean;
+  onToggleMute?: () => void;
   onFeedbackClose?: () => void;
 };
 
@@ -19,6 +21,8 @@ function renderSessionControls({
   feedback = null,
   onConnect = jest.fn(),
   onDisconnect = jest.fn(),
+  muted = false,
+  onToggleMute = jest.fn(),
   onFeedbackClose = jest.fn(),
 }: RenderProps = {}) {
   const theme = createTheme();
@@ -28,6 +32,8 @@ function renderSessionControls({
         status={status}
         onConnect={onConnect}
         onDisconnect={onDisconnect}
+        muted={muted}
+        onToggleMute={onToggleMute}
         feedback={feedback}
         onFeedbackClose={onFeedbackClose}
       />
@@ -38,6 +44,7 @@ function renderSessionControls({
     ...result,
     onConnect,
     onDisconnect,
+    onToggleMute,
     onFeedbackClose,
   };
 }
@@ -98,5 +105,31 @@ describe("SessionControls", () => {
     fireEvent.click(closeButton);
 
     expect(onFeedbackClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables microphone control until connected", () => {
+    renderSessionControls();
+
+    const button = screen.getByRole("button", {
+      name: /connect to enable microphone/i,
+    });
+
+    expect(button).toBeDisabled();
+  });
+
+  it("invokes mute toggle when connected", () => {
+    const { onToggleMute } = renderSessionControls({ status: "connected" });
+
+    fireEvent.click(screen.getByRole("button", { name: /mute microphone/i }));
+
+    expect(onToggleMute).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows unmute label when muted", () => {
+    renderSessionControls({ status: "connected", muted: true });
+
+    expect(
+      screen.getByRole("button", { name: /unmute microphone/i }),
+    ).toBeInTheDocument();
   });
 });

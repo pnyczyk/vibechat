@@ -54,7 +54,7 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
 }
 
 .emotion-5>:not(style)~:not(style) {
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .emotion-6 {
@@ -240,6 +240,32 @@ exports[`ChatClient layout matches the minimalist canvas snapshot 1`] = `
             >
               <path
                 d="M13 3h-2v10h2zm4.83 2.17-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83"
+              />
+            </svg>
+          </button>
+        </span>
+        <span
+          aria-label="Connect to enable microphone"
+          class=""
+          data-mui-internal-clone-element="true"
+        >
+          <button
+            aria-label="Connect to enable microphone"
+            aria-pressed="false"
+            class="MuiButtonBase-root Mui-disabled MuiIconButton-root Mui-disabled MuiIconButton-colorPrimary MuiIconButton-sizeLarge emotion-6"
+            disabled=""
+            tabindex="-1"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="MuiSvgIcon-root MuiSvgIcon-fontSizeInherit emotion-7"
+              data-testid="MicIcon"
+              focusable="false"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3m5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72z"
               />
             </svg>
           </button>

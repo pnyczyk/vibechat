@@ -9,6 +9,8 @@ import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import PowerOffIcon from "@mui/icons-material/PowerOff";
+import MicIcon from "@mui/icons-material/Mic";
+import MicOffIcon from "@mui/icons-material/MicOff";
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -21,6 +23,8 @@ export type SessionControlsProps = {
   status: ConnectionStatus;
   onConnect: () => void | Promise<void>;
   onDisconnect: () => void | Promise<void>;
+  muted: boolean;
+  onToggleMute: () => void;
   feedback: SessionFeedback | null;
   onFeedbackClose: () => void;
 };
@@ -29,6 +33,8 @@ export function SessionControls({
   status,
   onConnect,
   onDisconnect,
+  muted,
+  onToggleMute,
   feedback,
   onFeedbackClose,
 }: SessionControlsProps) {
@@ -44,7 +50,15 @@ export function SessionControls({
         ? "Reconnect to session"
         : "Connect to session";
 
+  const micTooltip = !isConnected
+    ? "Connect to enable microphone"
+    : muted
+      ? "Unmute microphone"
+      : "Mute microphone";
+
   const iconColor = isConnected ? "success" : isError ? "error" : "primary";
+  const micColor = muted ? "error" : "primary";
+  const micDisabled = !isConnected || isConnecting;
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -71,7 +85,7 @@ export function SessionControls({
     <>
       <Stack
         direction="column"
-        spacing={0.5}
+        spacing={1}
         alignItems="center"
         data-testid="session-controls"
       >
@@ -95,6 +109,30 @@ export function SessionControls({
                 <PowerOffIcon fontSize="inherit" />
               ) : (
                 <PowerSettingsNewIcon fontSize="inherit" />
+              )}
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title={micTooltip} placement="left">
+          <span>
+            <IconButton
+              aria-label={micTooltip}
+              aria-pressed={muted}
+              color={micColor}
+              disabled={micDisabled}
+              onClick={(event) => {
+                event.preventDefault();
+                if (micDisabled) {
+                  return;
+                }
+                onToggleMute();
+              }}
+              size="large"
+            >
+              {muted ? (
+                <MicOffIcon fontSize="inherit" />
+              ) : (
+                <MicIcon fontSize="inherit" />
               )}
             </IconButton>
           </span>
