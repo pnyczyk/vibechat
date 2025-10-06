@@ -8,6 +8,9 @@ jest.mock("@openai/agents/realtime", () => {
     connect = jest.fn();
     close = jest.fn();
     mute = jest.fn();
+    history: unknown[] = [];
+    on = jest.fn();
+    off = jest.fn();
   }
 
   return {

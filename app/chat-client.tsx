@@ -10,6 +10,7 @@ import {
   SessionFeedback,
   ConnectionStatus,
 } from "./components/SessionControls";
+import { TranscriptStore } from "./lib/transcript-store";
 
 export function ChatClient() {
   const [status, setStatus] = useState<ConnectionStatus>("idle");
@@ -17,12 +18,27 @@ export function ChatClient() {
   const [feedback, setFeedback] = useState<SessionFeedback | null>(null);
   const [muted, setMuted] = useState(false);
   const [session, setSession] = useState<RealtimeSession | null>(null);
+  const transcriptStore = useMemo(() => new TranscriptStore(), []);
 
   useEffect(() => {
     return () => {
       session?.close();
     };
   }, [session]);
+
+  useEffect(() => {
+    transcriptStore.setSession(session);
+
+    return () => {
+      transcriptStore.setSession(null);
+    };
+  }, [session, transcriptStore]);
+
+  useEffect(() => {
+    return () => {
+      transcriptStore.dispose();
+    };
+  }, [transcriptStore]);
 
   const agent = useMemo(() => {
     return new RealtimeAgent({

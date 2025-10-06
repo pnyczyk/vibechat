@@ -7,6 +7,9 @@ type MockRealtimeSession = {
   close: jest.Mock<void, []>;
   mute: jest.Mock<void, [boolean]>;
   muted: boolean;
+  history: unknown[];
+  on: jest.Mock;
+  off: jest.Mock;
 };
 
 const sessionInstances: MockRealtimeSession[] = [];
@@ -23,6 +26,9 @@ jest.mock("@openai/agents/realtime", () => {
           instance.muted = muted;
         }),
         muted: false,
+        history: [],
+        on: jest.fn(),
+        off: jest.fn(),
       } as MockRealtimeSession;
 
       sessionInstances.push(instance);
