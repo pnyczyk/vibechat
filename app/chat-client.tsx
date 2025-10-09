@@ -14,7 +14,8 @@ import {
   SessionFeedback,
   ConnectionStatus,
 } from "./components/SessionControls";
-import { TranscriptStore } from "./lib/transcript-store";
+import { TranscriptDrawer } from "./components/TranscriptDrawer";
+import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
 
 type VoiceActivityState = {
   level: number;
@@ -49,6 +50,8 @@ export function ChatClient() {
   const [voiceActivity, setVoiceActivity] = useState<VoiceActivityState>(
     defaultVoiceActivityState,
   );
+  const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
   const audioElement = useState(() => {
     if (typeof window === "undefined") {
       return null;
@@ -87,6 +90,14 @@ export function ChatClient() {
       transcriptStore.setSession(null);
     };
   }, [session, transcriptStore]);
+
+  useEffect(() => {
+    const unsubscribe = transcriptStore.subscribe((entries) => {
+      setTranscriptEntries(entries);
+    });
+
+    return unsubscribe;
+  }, [transcriptStore]);
 
   useEffect(() => {
     return () => {
@@ -170,6 +181,7 @@ export function ChatClient() {
     setMuted(false);
     setFeedback({ message: "Disconnected from session", severity: "success" });
     setVoiceActivity(defaultVoiceActivityState);
+    setIsTranscriptOpen(false);
   }, [session]);
 
   const handleToggleMute = useCallback(() => {
@@ -196,6 +208,30 @@ export function ChatClient() {
       setError(message);
     }
   }, [muted, session]);
+
+  const handleToggleTranscript = useCallback(() => {
+    setIsTranscriptOpen((previous) => !previous);
+  }, []);
+
+  const handleCloseTranscript = useCallback(() => {
+    setIsTranscriptOpen(false);
+  }, []);
+
+  const handleSendTranscriptMessage = useCallback(
+    async (text: string) => {
+      try {
+        transcriptStore.sendTextMessage(text);
+        setFeedback({ message: "Message sent", severity: "success" });
+      } catch (err) {
+        console.error("Failed to send transcript message", err);
+        const message =
+          err instanceof Error ? err.message : "Failed to send transcript message";
+        setFeedback({ message, severity: "error" });
+        throw err instanceof Error ? err : new Error(message);
+      }
+    },
+    [transcriptStore],
+  );
 
   const handleFeedbackClose = useCallback(() => {
     setFeedback(null);
@@ -411,9 +447,18 @@ export function ChatClient() {
             onFeedbackClose={handleFeedbackClose}
             voiceActive={voiceActivity.active}
             voiceHasMetrics={voiceActivity.hasMetrics}
+            transcriptOpen={isTranscriptOpen}
+            onToggleTranscript={handleToggleTranscript}
           />
         </div>
       </aside>
+      <TranscriptDrawer
+        open={isTranscriptOpen}
+        onClose={handleCloseTranscript}
+        entries={transcriptEntries}
+        onSendMessage={handleSendTranscriptMessage}
+        inputDisabled={status !== "connected"}
+      />
     </section>
   );
 }

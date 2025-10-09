@@ -22,10 +22,6 @@ function isConversationRole(
   return item.role === "user" || item.role === "assistant";
 }
 
-function isFinalStatus(status: string | undefined): boolean {
-  return status === "completed" || status === "incomplete";
-}
-
 function extractTextFromContent(
   item: Extract<RealtimeItem, { type: "message"; role: TranscriptRole }>,
 ): string {
@@ -46,21 +42,6 @@ function extractTextFromContent(
     .trim();
 }
 
-function buildTranscriptEntries(history: RealtimeItem[]): TranscriptEntry[] {
-  return history
-    .filter(isMessageItem)
-    .filter(isConversationRole)
-    .filter((item) =>
-      "status" in item ? isFinalStatus(item.status) : true,
-    )
-    .map((item) => ({
-      id: item.itemId,
-      role: item.role,
-      text: extractTextFromContent(item),
-    }))
-    .filter((entry) => entry.text.length > 0);
-}
-
 export class TranscriptStore {
   private entries: TranscriptEntry[] = [];
 
@@ -69,6 +50,8 @@ export class TranscriptStore {
   private session: RealtimeSession | null = null;
 
   private unbindSession: (() => void) | null = null;
+
+  private streamingText = new Map<string, string>();
 
   getEntries(): TranscriptEntry[] {
     return this.entries;
@@ -90,6 +73,7 @@ export class TranscriptStore {
     this.teardownSessionBinding();
 
     this.session = session;
+    this.streamingText.clear();
 
     if (!session) {
       this.reset();
@@ -97,16 +81,21 @@ export class TranscriptStore {
     }
 
     const updateFromHistory = () => {
-      this.entries = buildTranscriptEntries(session.history);
-      this.emit();
+      this.updateEntriesFromHistory(session);
+    };
+
+    const handleTransportEvent = (event: unknown) => {
+      this.handleTransportEvent(session, event);
     };
 
     session.on("history_updated", updateFromHistory);
     session.on("history_added", updateFromHistory);
+    session.on("transport_event", handleTransportEvent);
 
     this.unbindSession = () => {
       session.off("history_updated", updateFromHistory);
       session.off("history_added", updateFromHistory);
+      session.off("transport_event", handleTransportEvent);
     };
 
     updateFromHistory();
@@ -114,10 +103,12 @@ export class TranscriptStore {
 
   reset(): void {
     if (this.entries.length === 0) {
+      this.streamingText.clear();
       return;
     }
 
     this.entries = [];
+    this.streamingText.clear();
     this.emit();
   }
 
@@ -150,6 +141,7 @@ export class TranscriptStore {
     this.listeners.clear();
     this.entries = [];
     this.session = null;
+    this.streamingText.clear();
   }
 
   private emit(): void {
@@ -163,5 +155,102 @@ export class TranscriptStore {
       this.unbindSession();
       this.unbindSession = null;
     }
+
+    this.streamingText.clear();
   }
+
+  private handleTransportEvent(
+    session: RealtimeSession,
+    event: unknown,
+  ): void {
+    if (!event || typeof event !== "object") {
+      return;
+    }
+
+    const typed = event as {
+      type?: string;
+      itemId?: string;
+      delta?: string;
+    };
+
+    if (typed.type !== "transcript_delta") {
+      return;
+    }
+
+    if (typeof typed.itemId !== "string" || typeof typed.delta !== "string") {
+      return;
+    }
+
+    if (!typed.delta) {
+      return;
+    }
+
+    const existing = this.streamingText.get(typed.itemId) ?? this.getEntryText(typed.itemId);
+    const next = `${existing ?? ""}${typed.delta}`;
+    this.streamingText.set(typed.itemId, next);
+    this.updateEntriesFromHistory(session);
+  }
+
+  private getEntryText(itemId: string): string {
+    const existing = this.entries.find((entry) => entry.id === itemId);
+    return existing?.text ?? "";
+  }
+
+  private updateEntriesFromHistory(session: RealtimeSession): void {
+    const history = session.history;
+    const nextEntries: TranscriptEntry[] = [];
+
+    for (const item of history) {
+      if (!isMessageItem(item) || !isConversationRole(item)) {
+        continue;
+      }
+
+      const status =
+        typeof (item as { status?: string }).status === "string"
+          ? (item as { status?: string }).status
+          : null;
+      const baseText = extractTextFromContent(item);
+      const override = this.streamingText.get(item.itemId);
+
+      if (status === "completed" && override) {
+        this.streamingText.delete(item.itemId);
+      }
+
+      const text = override && status !== "completed" ? override : baseText;
+
+      if (!text) {
+        continue;
+      }
+
+      nextEntries.push({
+        id: item.itemId,
+        role: item.role,
+        text,
+      });
+    }
+
+    this.setEntries(nextEntries);
+  }
+
+  private setEntries(entries: TranscriptEntry[]): void {
+    const unchanged =
+      entries.length === this.entries.length &&
+      entries.every((entry, index) => {
+        const current = this.entries[index];
+        return (
+          current &&
+          current.id === entry.id &&
+          current.role === entry.role &&
+          current.text === entry.text
+        );
+      });
+
+    if (unchanged) {
+      return;
+    }
+
+    this.entries = entries;
+    this.emit();
+  }
+
 }

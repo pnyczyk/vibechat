@@ -138,4 +138,56 @@ describe("TranscriptStore", () => {
       /active session/i,
     );
   });
+
+  it("streams assistant entries as deltas arrive", () => {
+    const session = new MockRealtimeSession();
+    const store = new TranscriptStore();
+
+    store.setSession(session as unknown as RealtimeSession);
+
+    const streamingChunk = createAssistantMessage("a-1", "", {
+      status: "in_progress" as MessageItem["status"],
+    });
+
+    session.setHistory([streamingChunk]);
+
+    expect(store.getEntries()).toEqual([]);
+
+    session.emit("transport_event", {
+      type: "transcript_delta",
+      itemId: "a-1",
+      delta: "Typing",
+    });
+
+    expect(store.getEntries()).toEqual([
+      { id: "a-1", role: "assistant", text: "Typing" },
+    ]);
+
+    session.emit("transport_event", {
+      type: "transcript_delta",
+      itemId: "a-1",
+      delta: " response",
+    });
+
+    expect(store.getEntries()).toEqual([
+      { id: "a-1", role: "assistant", text: "Typing response" },
+    ]);
+
+    const completed = createAssistantMessage("a-1", "Typing response done");
+    session.setHistory([completed]);
+
+    expect(store.getEntries()).toEqual([
+      { id: "a-1", role: "assistant", text: "Typing response done" },
+    ]);
+
+    session.emit("transport_event", {
+      type: "transcript_delta",
+      itemId: "a-1",
+      delta: " extra",
+    });
+
+    expect(store.getEntries()).toEqual([
+      { id: "a-1", role: "assistant", text: "Typing response done" },
+    ]);
+  });
 });
