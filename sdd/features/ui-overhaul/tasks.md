@@ -115,7 +115,7 @@ Render a live voice activity indicator using realtime playback data with gracefu
 ---
 
 ## Task T006: Capture Live Transcript State
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T003
 **Files:**
 - `app/chat-client.tsx`
