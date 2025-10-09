@@ -103,7 +103,7 @@ Created:
 Next:
 1. Review AGENTS.md
 2. Add features to sdd/features.md
-3. /sdd:spec <feature-name>
+3. /sdd-spec <feature-name>
 ```
 
 ## Guidelines

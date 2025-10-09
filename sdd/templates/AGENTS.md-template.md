@@ -1,9 +1,16 @@
 # vibechat
 
-Codex CLI slash-command prompts should read this file to preload project rules before generating code.
-Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference it.
+This file provides AI coding agents with project-specific instructions.
+
+See: https://agents.md/
 
 **All AI-generated code must follow these guidelines.**
+
+## Project Overview
+
+[Brief description of what this project does, who it's for, and what problems it solves. Keep to 1-2 paragraphs, 80-150 words.]
+
+Example: "vibechat is a [type of application] for [target users]. It provides [key features] using [main technologies]. The goal is to [primary objective]."
 
 ## Tech Stack
 
@@ -115,9 +122,9 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 This project uses Spec-Driven Development (SDD). See sdd/README.md for full workflow guide.
 
 Commands:
-- /sdd:spec [name] - Create feature specification
-- /sdd:tasks [name] - Generate implementation tasks
-- /sdd:implement [name] [task-id] - Implement single task
+- /sdd-spec [name] - Create feature specification
+- /sdd-tasks [name] - Generate implementation tasks
+- /sdd-implement [name] [task-id] - Implement single task
 
 Documentation:
 - sdd/README.md - Workflow overview
