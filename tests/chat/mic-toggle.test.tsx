@@ -13,21 +13,32 @@ const sessionInstances: MockRealtimeSession[] = [];
 const originalFetch = global.fetch;
 
 jest.mock("@openai/agents/realtime", () => {
+  class MockSession {
+    connect = jest.fn().mockResolvedValue(undefined);
+
+    close = jest.fn();
+
+    mute = jest.fn((muted: boolean) => {
+      this.muted = muted;
+    });
+
+    muted = false;
+
+    getLatestAudioLevel = jest.fn().mockReturnValue(null);
+  }
+
   return {
     RealtimeAgent: jest.fn().mockImplementation(() => ({})),
     RealtimeSession: jest.fn().mockImplementation(() => {
-      const instance = {
-        connect: jest.fn().mockResolvedValue(undefined),
-        close: jest.fn(),
-        mute: jest.fn((muted: boolean) => {
-          instance.muted = muted;
-        }),
-        muted: false,
-      } as MockRealtimeSession;
-
+      const instance = new MockSession() as MockRealtimeSession;
       sessionInstances.push(instance);
       return instance;
     }),
+    OpenAIRealtimeWebRTC: jest
+      .fn()
+      .mockImplementation((options?: { audioElement?: HTMLAudioElement }) => ({
+        options,
+      })),
   };
 });
 

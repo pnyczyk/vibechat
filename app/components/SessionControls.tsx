@@ -7,10 +7,14 @@ import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
+import Box from "@mui/material/Box";
+import { visuallyHidden } from "@mui/utils";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import PowerOffIcon from "@mui/icons-material/PowerOff";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
+import GraphicEqIcon from "@mui/icons-material/GraphicEq";
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -27,7 +31,55 @@ export type SessionControlsProps = {
   onToggleMute: () => void;
   feedback: SessionFeedback | null;
   onFeedbackClose: () => void;
+  voiceActive: boolean;
+  voiceHasMetrics: boolean;
 };
+
+type VoiceActivityIndicatorProps = {
+  active: boolean;
+  hasMetrics: boolean;
+};
+
+function VoiceActivityIndicator({ active, hasMetrics }: VoiceActivityIndicatorProps) {
+  const label = active
+    ? "AI is speaking"
+    : hasMetrics
+      ? "AI is idle"
+      : "Waiting for audio";
+
+  const Icon = active ? GraphicEqIcon : FiberManualRecordIcon;
+  const color = active ? "success.main" : hasMetrics ? "text.secondary" : "text.disabled";
+
+  return (
+    <Box
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+      data-testid="voice-activity-indicator"
+      sx={{
+        mt: 2,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 999,
+        backgroundColor: (theme) => theme.palette.action.hover,
+        padding: "0.35rem 0.5rem",
+      }}
+    >
+      <Icon
+        fontSize="small"
+        sx={{
+          color,
+          transition: "transform 180ms ease, color 180ms ease",
+          transform: active ? "scale(1.1)" : "scale(0.9)",
+        }}
+      />
+      <Box component="span" sx={visuallyHidden}>
+        {label}
+      </Box>
+    </Box>
+  );
+}
 
 export function SessionControls({
   status,
@@ -37,6 +89,8 @@ export function SessionControls({
   onToggleMute,
   feedback,
   onFeedbackClose,
+  voiceActive,
+  voiceHasMetrics,
 }: SessionControlsProps) {
   const isConnecting = status === "connecting";
   const isConnected = status === "connected";
@@ -137,6 +191,7 @@ export function SessionControls({
             </IconButton>
           </span>
         </Tooltip>
+        <VoiceActivityIndicator active={voiceActive} hasMetrics={voiceHasMetrics} />
       </Stack>
 
       <Snackbar

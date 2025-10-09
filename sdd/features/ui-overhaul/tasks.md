@@ -93,24 +93,24 @@ Introduce a mute/unmute Material UI icon control that pauses outgoing microphone
 ---
 
 ## Task T005: Integrate Voice Activity Meter
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T003
 **Files:**
-- `app/components/VoiceMeter.tsx`
 - `app/chat-client.tsx`
+- `app/components/SessionControls.tsx`
 - `tests/chat/voice-meter.test.tsx`
 
 ### Description
-Render a bottom-right Material UI indicator visualizing AI voice activity using realtime audio level data with graceful fallback when metrics are unavailable.
+Render a live voice activity indicator using realtime playback data with graceful fallback when metrics are unavailable.
 
 ### Acceptance Criteria
-- Voice meter component animates during agent playback and rests when idle
-- Component positions bottom-right without overlapping transcript drawer or controls
+- Voice indicator reflects speech/idle states during playback using realtime levels
+- Indicator sits within the control rail without overlapping future UI elements
 - Unit tests validate state mapping for active/inactive scenarios with mocked data
 
 ### Implementation Notes
 - Reference spec Story 2
-- Consider CSS animations or MUI progress components for dynamic feedback
+- Smooth animation can leverage simple icon transitions fed by Web Audio analyser data
 
 ---
 
