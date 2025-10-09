@@ -63,12 +63,6 @@
   max-width: 28rem;
 }
 
-.voiceMeterWrapper {
-  display: flex;
-  justify-content: flex-end;
-  align-self: flex-end;
-  margin-top: 0.75rem;
-}
 
 .controlRail {
   display: flex;
@@ -118,8 +112,4 @@
     margin: 0 auto;
   }
 
-  .voiceMeterWrapper {
-    width: 100%;
-    justify-content: center;
-  }
 }

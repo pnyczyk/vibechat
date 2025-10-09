@@ -8,6 +8,7 @@ type MockRealtimeSession = EventEmitter & {
   close: jest.Mock<void, []>;
   mute: jest.Mock<void, [boolean]>;
   muted: boolean;
+  getLatestAudioLevel?: jest.Mock<number | null | undefined, []>;
 };
 
 const sessionInstances: MockRealtimeSession[] = [];
@@ -33,6 +34,9 @@ jest.mock("@openai/agents/realtime", () => {
       sessionInstances.push(instance);
       return instance;
     }),
+    OpenAIRealtimeWebRTC: jest.fn().mockImplementation((options?: { audioElement?: HTMLAudioElement }) => ({
+      options,
+    })),
   };
 });
 
@@ -40,6 +44,7 @@ const fetchMock = jest.fn();
 
 describe("ChatClient voice meter", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     sessionInstances.length = 0;
 
     fetchMock.mockResolvedValue({
@@ -53,10 +58,14 @@ describe("ChatClient voice meter", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
     global.fetch = originalFetch;
   });
 
-  it("maps session voice activity events to the UI", async () => {
+  it("reflects realtime playback levels", async () => {
     render(
       <Providers>
         <ChatClient />
@@ -70,21 +79,29 @@ describe("ChatClient voice meter", () => {
 
     await waitFor(() => expect(session.connect).toHaveBeenCalledTimes(1));
 
-    const voiceMeter = await screen.findByTestId("voice-meter");
-    expect(voiceMeter).toHaveTextContent(/waiting for audio/i);
-    expect(voiceMeter).toHaveTextContent(/inactive/i);
+    let latestLevel: number | null | undefined = null;
+    session.getLatestAudioLevel = jest.fn(() => latestLevel);
+
+    const indicator = await screen.findByTestId("voice-activity-indicator");
+    expect(indicator).toHaveAttribute("aria-label", expect.stringMatching(/waiting for audio/i));
 
     await act(async () => {
-      session.emit("voice-activity", { level: 0.8 });
+      latestLevel = 0.7;
+      jest.advanceTimersByTime(240);
     });
 
-    await waitFor(() => expect(voiceMeter).toHaveTextContent(/speaking/i));
-    expect(voiceMeter).not.toHaveTextContent(/waiting for audio/i);
+    await waitFor(() =>
+      expect(indicator).toHaveAttribute("aria-label", expect.stringMatching(/speaking/i)),
+    );
+    expect(indicator).not.toHaveAttribute("aria-label", expect.stringMatching(/waiting for audio/i));
 
     await act(async () => {
-      session.emit("voice-activity", { active: false });
+      latestLevel = null;
+      jest.advanceTimersByTime(900);
     });
 
-    await waitFor(() => expect(voiceMeter).toHaveTextContent(/idle/i));
+    await waitFor(() =>
+      expect(indicator).toHaveAttribute("aria-label", expect.stringMatching(/idle/i)),
+    );
   });
 });
