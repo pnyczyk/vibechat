@@ -14,6 +14,7 @@ import {
   SessionFeedback,
   ConnectionStatus,
 } from "./components/SessionControls";
+import { TranscriptStore } from "./lib/transcript-store";
 
 type VoiceActivityState = {
   level: number;
@@ -44,6 +45,7 @@ export function ChatClient() {
   const [feedback, setFeedback] = useState<SessionFeedback | null>(null);
   const [muted, setMuted] = useState(false);
   const [session, setSession] = useState<RealtimeSession | null>(null);
+  const transcriptStore = useMemo(() => new TranscriptStore(), []);
   const [voiceActivity, setVoiceActivity] = useState<VoiceActivityState>(
     defaultVoiceActivityState,
   );
@@ -77,6 +79,20 @@ export function ChatClient() {
       session?.close();
     };
   }, [session]);
+
+  useEffect(() => {
+    transcriptStore.setSession(session);
+
+    return () => {
+      transcriptStore.setSession(null);
+    };
+  }, [session, transcriptStore]);
+
+  useEffect(() => {
+    return () => {
+      transcriptStore.dispose();
+    };
+  }, [transcriptStore]);
 
   const agent = useMemo(() => {
     return new RealtimeAgent({

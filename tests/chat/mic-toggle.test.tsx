@@ -7,6 +7,10 @@ type MockRealtimeSession = {
   close: jest.Mock<void, []>;
   mute: jest.Mock<void, [boolean]>;
   muted: boolean;
+  history: unknown[];
+  on: jest.Mock;
+  off: jest.Mock;
+  getLatestAudioLevel: jest.Mock<number | null, []>;
 };
 
 const sessionInstances: MockRealtimeSession[] = [];
@@ -23,6 +27,12 @@ jest.mock("@openai/agents/realtime", () => {
     });
 
     muted = false;
+
+    history: unknown[] = [];
+
+    on = jest.fn();
+
+    off = jest.fn();
 
     getLatestAudioLevel = jest.fn().mockReturnValue(null);
   }
