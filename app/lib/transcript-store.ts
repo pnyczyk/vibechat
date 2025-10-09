@@ -53,6 +53,10 @@ export class TranscriptStore {
 
   private streamingText = new Map<string, string>();
 
+  private streamingRole = new Map<string, TranscriptRole>();
+
+  private transportDebugCount = 0;
+
   getEntries(): TranscriptEntry[] {
     return this.entries;
   }
@@ -74,6 +78,7 @@ export class TranscriptStore {
 
     this.session = session;
     this.streamingText.clear();
+    this.streamingRole.clear();
 
     if (!session) {
       this.reset();
@@ -104,11 +109,13 @@ export class TranscriptStore {
   reset(): void {
     if (this.entries.length === 0) {
       this.streamingText.clear();
+      this.streamingRole.clear();
       return;
     }
 
     this.entries = [];
     this.streamingText.clear();
+    this.streamingRole.clear();
     this.emit();
   }
 
@@ -142,6 +149,7 @@ export class TranscriptStore {
     this.entries = [];
     this.session = null;
     this.streamingText.clear();
+    this.streamingRole.clear();
   }
 
   private emit(): void {
@@ -157,6 +165,7 @@ export class TranscriptStore {
     }
 
     this.streamingText.clear();
+    this.streamingRole.clear();
   }
 
   private handleTransportEvent(
@@ -167,27 +176,53 @@ export class TranscriptStore {
       return;
     }
 
-    const typed = event as {
+    const typed = event as Record<string, unknown> & {
       type?: string;
-      itemId?: string;
-      delta?: string;
     };
 
-    if (typed.type !== "transcript_delta") {
+    this.logTransportEvent(typed);
+
+    const type = typeof typed.type === "string" ? typed.type : "";
+    const isDeltaEvent =
+      type === "transcript_delta" ||
+      type === "response.output_audio_transcript.delta" ||
+      type === "response.output_text.delta";
+
+    if (!isDeltaEvent) {
       return;
     }
 
-    if (typeof typed.itemId !== "string" || typeof typed.delta !== "string") {
+    const rawItemId =
+      typeof typed.itemId === "string"
+        ? typed.itemId
+        : typeof (typed as { item_id?: unknown }).item_id === "string"
+          ? ((typed as { item_id: string }).item_id)
+          : undefined;
+
+    const deltaValue = typeof (typed as { delta?: unknown }).delta === "string"
+      ? (typed as { delta: string }).delta
+      : undefined;
+
+    if (!rawItemId || !deltaValue) {
       return;
     }
 
-    if (!typed.delta) {
-      return;
+    this.ensureStreamingRole(rawItemId, session.history);
+
+    const isTestEnv =
+      typeof process !== "undefined" && process.env.NODE_ENV === "test";
+
+    if (typeof window !== "undefined" && !isTestEnv) {
+      console.debug("TranscriptStore:transcript_delta", {
+        type,
+        itemId: rawItemId,
+        delta: deltaValue,
+      });
     }
 
-    const existing = this.streamingText.get(typed.itemId) ?? this.getEntryText(typed.itemId);
-    const next = `${existing ?? ""}${typed.delta}`;
-    this.streamingText.set(typed.itemId, next);
+    const existing = this.streamingText.get(rawItemId) ?? this.getEntryText(rawItemId);
+    const next = `${existing ?? ""}${deltaValue}`;
+    this.streamingText.set(rawItemId, next);
     this.updateEntriesFromHistory(session);
   }
 
@@ -204,6 +239,8 @@ export class TranscriptStore {
       if (!isMessageItem(item) || !isConversationRole(item)) {
         continue;
       }
+
+      this.streamingRole.set(item.itemId, item.role);
 
       const status =
         typeof (item as { status?: string }).status === "string"
@@ -229,6 +266,7 @@ export class TranscriptStore {
       });
     }
 
+    this.appendStreamingFallback(nextEntries);
     this.setEntries(nextEntries);
   }
 
@@ -253,4 +291,75 @@ export class TranscriptStore {
     this.emit();
   }
 
+  private appendStreamingFallback(entries: TranscriptEntry[]): void {
+    if (this.streamingText.size === 0) {
+      return;
+    }
+
+    for (const [itemId, text] of this.streamingText) {
+      if (!text) {
+        continue;
+      }
+
+      const exists = entries.some((entry) => entry.id === itemId);
+      if (exists) {
+        continue;
+      }
+
+      const role =
+        this.streamingRole.get(itemId) ?? this.findEntryRole(itemId) ?? "assistant";
+
+    entries.push({
+      id: itemId,
+      role,
+      text,
+    });
+  }
+
+  }
+
+  private findEntryRole(itemId: string): TranscriptRole | null {
+    const existing = this.entries.find((entry) => entry.id === itemId);
+    return existing?.role ?? null;
+  }
+
+  private ensureStreamingRole(itemId: string, history: RealtimeItem[]): void {
+    if (this.streamingRole.has(itemId)) {
+      return;
+    }
+
+    const historyItem = history.find(
+      (entry): entry is Extract<RealtimeItem, { type: "message"; role: TranscriptRole }> =>
+        isMessageItem(entry) && isConversationRole(entry) && entry.itemId === itemId,
+    );
+
+    if (historyItem) {
+      this.streamingRole.set(itemId, historyItem.role);
+      return;
+    }
+
+    const existing = this.entries.find((entry) => entry.id === itemId);
+    if (existing) {
+      this.streamingRole.set(itemId, existing.role);
+    }
+  }
+
+  private logTransportEvent(event: Record<string, unknown> & { type?: string }): void {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const isTestEnv =
+      typeof process !== "undefined" && process.env.NODE_ENV === "test";
+    if (isTestEnv) {
+      return;
+    }
+
+    if (this.transportDebugCount >= 20) {
+      return;
+    }
+
+    this.transportDebugCount += 1;
+    console.debug("TranscriptStore:transport_event", event);
+  }
 }

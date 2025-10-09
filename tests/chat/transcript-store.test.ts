@@ -154,8 +154,8 @@ describe("TranscriptStore", () => {
     expect(store.getEntries()).toEqual([]);
 
     session.emit("transport_event", {
-      type: "transcript_delta",
-      itemId: "a-1",
+      type: "response.output_audio_transcript.delta",
+      item_id: "a-1",
       delta: "Typing",
     });
 
@@ -164,10 +164,16 @@ describe("TranscriptStore", () => {
     ]);
 
     session.emit("transport_event", {
-      type: "transcript_delta",
-      itemId: "a-1",
+      type: "response.output_audio_transcript.delta",
+      item_id: "a-1",
       delta: " response",
     });
+
+    expect(store.getEntries()).toEqual([
+      { id: "a-1", role: "assistant", text: "Typing response" },
+    ]);
+
+    session.setHistory([]);
 
     expect(store.getEntries()).toEqual([
       { id: "a-1", role: "assistant", text: "Typing response" },
@@ -181,8 +187,8 @@ describe("TranscriptStore", () => {
     ]);
 
     session.emit("transport_event", {
-      type: "transcript_delta",
-      itemId: "a-1",
+      type: "response.output_audio_transcript.delta",
+      item_id: "a-1",
       delta: " extra",
     });
 
