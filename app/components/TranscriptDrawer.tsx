@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
@@ -38,6 +45,7 @@ export function TranscriptDrawer({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const listRef = useRef<HTMLUListElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const latestEntryId = useMemo(
     () => (entries.length > 0 ? entries[entries.length - 1]!.id : null),
     [entries],
@@ -62,6 +70,14 @@ export function TranscriptDrawer({
       setSubmitError(null);
     }
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || inputDisabled) {
+      return;
+    }
+
+    inputRef.current?.focus({ preventScroll: true });
+  }, [inputDisabled, open]);
 
   const submitMessage = async () => {
     if (inputDisabled || isSubmitting) {
@@ -208,6 +224,7 @@ export function TranscriptDrawer({
             helperText={
               submitError ?? "Press Enter to send, Shift+Enter for a new line"
             }
+            inputRef={inputRef}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">

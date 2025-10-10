@@ -202,7 +202,7 @@ Add lightweight logging for connect success/failure, mute toggles, and drawer us
 ---
 
 ## Task T010: Accessibility & Responsiveness Review
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T007
 **Files:**
 - `app/chat-client.tsx`

@@ -83,6 +83,11 @@
   box-shadow: none;
 }
 
+.controlRailInner :global(.MuiIconButton-root:focus-visible) {
+  outline: 3px solid var(--mui-palette-primary-main, #2563eb);
+  outline-offset: 4px;
+}
+
 @media (max-width: 1024px) {
   .layout {
     grid-template-columns: 1fr;

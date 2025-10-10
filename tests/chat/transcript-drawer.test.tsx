@@ -117,4 +117,13 @@ describe("TranscriptDrawer", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("allows keyboard focus on the message field", () => {
+    renderTranscriptDrawer();
+
+    const textarea = screen.getByLabelText(/send a message/i);
+    textarea.focus();
+
+    expect(textarea).toHaveFocus();
+  });
 });

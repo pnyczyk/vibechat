@@ -50,6 +50,7 @@ export function ChatClient() {
   );
   const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [isCompactLayout, setIsCompactLayout] = useState(false);
   const audioElement = useState(() => {
     if (typeof window === "undefined") {
       return null;
@@ -102,6 +103,36 @@ export function ChatClient() {
       transcriptStore.dispose();
     };
   }, [transcriptStore]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsCompactLayout(event.matches);
+    };
+
+    handleChange(mediaQuery);
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      const listener = handleChange as (event: MediaQueryListEvent) => void;
+      mediaQuery.addEventListener("change", listener);
+      return () => {
+        mediaQuery.removeEventListener("change", listener);
+      };
+    }
+
+    const legacyListener = (event: MediaQueryListEvent) => handleChange(event);
+    // @ts-expect-error - addListener is deprecated but needed for older browsers
+    mediaQuery.addListener(legacyListener);
+    return () => {
+      // @ts-expect-error - removeListener is deprecated but needed for older browsers
+      mediaQuery.removeListener(legacyListener);
+    };
+  }, []);
 
   const agent = useMemo(() => {
     return new RealtimeAgent({
@@ -426,8 +457,11 @@ export function ChatClient() {
   }, [audioElement, session, status]);
 
   return (
-    <section className={styles.layout} aria-labelledby="chat-title">
-      <div className={styles.canvas}>
+    <div
+      className={styles.layout}
+      data-layout={isCompactLayout ? "compact" : "wide"}
+    >
+      <main className={styles.canvas} aria-labelledby="chat-title">
         <header className={styles.header}>
           <Typography
             id="chat-title"
@@ -464,7 +498,7 @@ export function ChatClient() {
             )}
           </div>
         </footer>
-      </div>
+      </main>
 
       <aside className={styles.controlRail} aria-label="Session controls">
         <div className={styles.controlRailInner}>
@@ -490,6 +524,6 @@ export function ChatClient() {
         onSendMessage={handleSendTranscriptMessage}
         inputDisabled={status !== "connected"}
       />
-    </section>
+    </div>
   );
 }
