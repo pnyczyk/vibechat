@@ -55,7 +55,7 @@ export class TranscriptStore {
 
   private streamingRole = new Map<string, TranscriptRole>();
 
-  private transportDebugCount = 0;
+  private debugCount = 0;
 
   getEntries(): TranscriptEntry[] {
     return this.entries;
@@ -180,8 +180,6 @@ export class TranscriptStore {
       type?: string;
     };
 
-    this.logTransportEvent(typed);
-
     const type = typeof typed.type === "string" ? typed.type : "";
     const isDeltaEvent =
       type === "transcript_delta" ||
@@ -212,13 +210,11 @@ export class TranscriptStore {
     const isTestEnv =
       typeof process !== "undefined" && process.env.NODE_ENV === "test";
 
-    if (typeof window !== "undefined" && !isTestEnv) {
-      console.debug("TranscriptStore:transcript_delta", {
-        type,
-        itemId: rawItemId,
-        delta: deltaValue,
-      });
-    }
+    this.debugLog("delta", {
+      eventType: type,
+      itemId: rawItemId,
+      delta: deltaValue,
+    });
 
     const existing = this.streamingText.get(rawItemId) ?? this.getEntryText(rawItemId);
     const next = `${existing ?? ""}${deltaValue}`;
@@ -289,6 +285,14 @@ export class TranscriptStore {
 
     this.entries = entries;
     this.emit();
+
+    this.debugLog("update", {
+      entries: entries.map((entry) => ({
+        id: entry.id,
+        role: entry.role,
+        text: entry.text.slice(0, 80),
+      })),
+    });
   }
 
   private appendStreamingFallback(entries: TranscriptEntry[]): void {
@@ -344,22 +348,31 @@ export class TranscriptStore {
     }
   }
 
-  private logTransportEvent(event: Record<string, unknown> & { type?: string }): void {
-    if (typeof window === "undefined") {
+  private debugLog(event: "delta" | "update", payload: Record<string, unknown>): void {
+    if (!this.shouldLogDebug()) {
       return;
+    }
+
+    if (this.debugCount >= 40) {
+      return;
+    }
+
+    this.debugCount += 1;
+    const timestamp = new Date().toISOString();
+    console.debug(`[${timestamp}] TranscriptStore:${event}`, payload);
+  }
+
+  private shouldLogDebug(): boolean {
+    if (typeof window === "undefined") {
+      return false;
     }
 
     const isTestEnv =
       typeof process !== "undefined" && process.env.NODE_ENV === "test";
     if (isTestEnv) {
-      return;
+      return false;
     }
 
-    if (this.transportDebugCount >= 20) {
-      return;
-    }
-
-    this.transportDebugCount += 1;
-    console.debug("TranscriptStore:transport_event", event);
+    return true;
   }
 }
