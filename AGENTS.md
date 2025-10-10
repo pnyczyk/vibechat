@@ -104,6 +104,7 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 - Add focused README sections when introducing new agent capabilities
 
 ### Git Workflow
+- Check status of GitHub issues and pull requests before starting to do anything with code and before answerwing questions on develeopment status.
 - Use feature branches; follow Conventional Commit messages
 - Require PR review before merging into main
 - Track every SDD task as a GitHub issue using GitHub CLI (`gh issue` commands) and keep status in sync when tasks progress
