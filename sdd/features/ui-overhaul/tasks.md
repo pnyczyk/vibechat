@@ -137,7 +137,7 @@ Subscribe to realtime session events to maintain an in-memory transcript and sup
 ---
 
 ## Task T007: Build Transcript Drawer UI
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T006
 **Files:**
 - `app/components/TranscriptDrawer.tsx`
