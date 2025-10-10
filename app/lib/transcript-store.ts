@@ -55,8 +55,6 @@ export class TranscriptStore {
 
   private streamingRole = new Map<string, TranscriptRole>();
 
-  private debugCount = 0;
-
   getEntries(): TranscriptEntry[] {
     return this.entries;
   }
@@ -353,11 +351,6 @@ export class TranscriptStore {
       return;
     }
 
-    if (this.debugCount >= 40) {
-      return;
-    }
-
-    this.debugCount += 1;
     const timestamp = new Date().toISOString();
     console.debug(`[${timestamp}] TranscriptStore:${event}`, payload);
   }
