@@ -55,6 +55,10 @@ export class TranscriptStore {
 
   private streamingRole = new Map<string, TranscriptRole>();
 
+  private persistentEntries = new Map<string, TranscriptEntry>();
+
+  private entryOrder: string[] = [];
+
   getEntries(): TranscriptEntry[] {
     return this.entries;
   }
@@ -77,6 +81,8 @@ export class TranscriptStore {
     this.session = session;
     this.streamingText.clear();
     this.streamingRole.clear();
+    this.persistentEntries.clear();
+    this.entryOrder = [];
 
     if (!session) {
       this.reset();
@@ -108,12 +114,16 @@ export class TranscriptStore {
     if (this.entries.length === 0) {
       this.streamingText.clear();
       this.streamingRole.clear();
+      this.persistentEntries.clear();
+      this.entryOrder = [];
       return;
     }
 
     this.entries = [];
     this.streamingText.clear();
     this.streamingRole.clear();
+    this.persistentEntries.clear();
+    this.entryOrder = [];
     this.emit();
   }
 
@@ -148,6 +158,8 @@ export class TranscriptStore {
     this.session = null;
     this.streamingText.clear();
     this.streamingRole.clear();
+    this.persistentEntries.clear();
+    this.entryOrder = [];
   }
 
   private emit(): void {
@@ -164,6 +176,8 @@ export class TranscriptStore {
 
     this.streamingText.clear();
     this.streamingRole.clear();
+    this.persistentEntries.clear();
+    this.entryOrder = [];
   }
 
   private handleTransportEvent(
@@ -204,6 +218,7 @@ export class TranscriptStore {
     }
 
     this.ensureStreamingRole(rawItemId, session.history);
+    this.ensureEntryOrder(rawItemId);
 
     const isTestEnv =
       typeof process !== "undefined" && process.env.NODE_ENV === "test";
@@ -221,19 +236,19 @@ export class TranscriptStore {
   }
 
   private getEntryText(itemId: string): string {
-    const existing = this.entries.find((entry) => entry.id === itemId);
+    const existing = this.persistentEntries.get(itemId);
     return existing?.text ?? "";
   }
 
   private updateEntriesFromHistory(session: RealtimeSession): void {
     const history = session.history;
-    const nextEntries: TranscriptEntry[] = [];
 
     for (const item of history) {
       if (!isMessageItem(item) || !isConversationRole(item)) {
         continue;
       }
 
+      this.ensureEntryOrder(item.itemId);
       this.streamingRole.set(item.itemId, item.role);
 
       const status =
@@ -247,27 +262,64 @@ export class TranscriptStore {
         this.streamingText.delete(item.itemId);
       }
 
-      const text = override && status !== "completed" ? override : baseText;
+      const fallback = this.persistentEntries.get(item.itemId)?.text ?? "";
+      const text = override && status !== "completed"
+        ? override
+        : baseText || fallback;
 
       if (!text) {
         continue;
       }
 
-      nextEntries.push({
-        id: item.itemId,
-        role: item.role,
-        text,
-      });
+      this.upsertPersistentEntry(item.itemId, item.role, text);
     }
 
-    this.appendStreamingFallback(nextEntries);
-    this.setEntries(nextEntries);
+    this.appendStreamingFallback();
+    this.emitEntries();
   }
 
-  private setEntries(entries: TranscriptEntry[]): void {
+  private appendStreamingFallback(): void {
+    if (this.streamingText.size === 0) {
+      return;
+    }
+
+    for (const [itemId, text] of this.streamingText) {
+      if (!text) {
+        continue;
+      }
+
+      const role =
+        this.streamingRole.get(itemId) ||
+        this.persistentEntries.get(itemId)?.role ||
+        "assistant";
+
+      this.ensureEntryOrder(itemId);
+      this.upsertPersistentEntry(itemId, role, text);
+    }
+  }
+
+  private upsertPersistentEntry(
+    itemId: string,
+    role: TranscriptRole,
+    text: string,
+  ): void {
+    this.persistentEntries.set(itemId, { id: itemId, role, text });
+  }
+
+  private emitEntries(): void {
+    const nextEntries: TranscriptEntry[] = [];
+
+    for (const itemId of this.entryOrder) {
+      const entry = this.persistentEntries.get(itemId);
+      if (!entry || !entry.text) {
+        continue;
+      }
+      nextEntries.push(entry);
+    }
+
     const unchanged =
-      entries.length === this.entries.length &&
-      entries.every((entry, index) => {
+      nextEntries.length === this.entries.length &&
+      nextEntries.every((entry, index) => {
         const current = this.entries[index];
         return (
           current &&
@@ -281,48 +333,16 @@ export class TranscriptStore {
       return;
     }
 
-    this.entries = entries;
+    this.entries = nextEntries;
     this.emit();
 
     this.debugLog("update", {
-      entries: entries.map((entry) => ({
+      entries: nextEntries.map((entry) => ({
         id: entry.id,
         role: entry.role,
         text: entry.text.slice(0, 80),
       })),
     });
-  }
-
-  private appendStreamingFallback(entries: TranscriptEntry[]): void {
-    if (this.streamingText.size === 0) {
-      return;
-    }
-
-    for (const [itemId, text] of this.streamingText) {
-      if (!text) {
-        continue;
-      }
-
-      const exists = entries.some((entry) => entry.id === itemId);
-      if (exists) {
-        continue;
-      }
-
-      const role =
-        this.streamingRole.get(itemId) ?? this.findEntryRole(itemId) ?? "assistant";
-
-    entries.push({
-      id: itemId,
-      role,
-      text,
-    });
-  }
-
-  }
-
-  private findEntryRole(itemId: string): TranscriptRole | null {
-    const existing = this.entries.find((entry) => entry.id === itemId);
-    return existing?.role ?? null;
   }
 
   private ensureStreamingRole(itemId: string, history: RealtimeItem[]): void {
@@ -340,9 +360,15 @@ export class TranscriptStore {
       return;
     }
 
-    const existing = this.entries.find((entry) => entry.id === itemId);
+    const existing = this.persistentEntries.get(itemId);
     if (existing) {
       this.streamingRole.set(itemId, existing.role);
+    }
+  }
+
+  private ensureEntryOrder(itemId: string): void {
+    if (!this.entryOrder.includes(itemId)) {
+      this.entryOrder.push(itemId);
     }
   }
 
