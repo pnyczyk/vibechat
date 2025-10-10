@@ -224,6 +224,7 @@ export function SessionControls({
         autoHideDuration={4500}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        message={null}
       >
         {feedback ? (
           <Alert
@@ -235,7 +236,7 @@ export function SessionControls({
           >
             {feedback.message}
           </Alert>
-        ) : null}
+        ) : undefined}
       </Snackbar>
     </>
   );

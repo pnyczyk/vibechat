@@ -58,7 +58,7 @@ export function ChatClient() {
     }
     const element = document.createElement("audio");
     element.autoplay = true;
-    element.playsInline = true;
+    (element as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
     element.style.display = "none";
     document.body.appendChild(element);
     return element;
