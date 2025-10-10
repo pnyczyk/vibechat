@@ -64,6 +64,9 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 - CI Command: `npm test -- --ci` (add Playwright run once configured)
 - E2E: `npm run test:e2e` (spins Next dev server with mocked realtime session)
 
+### Telemetry
+- Toggle runtime telemetry with `NEXT_PUBLIC_ENABLE_TELEMETRY=1`; default is disabled in dev, test, and CI.
+
 ## Architecture Principles
 
 ### Layers

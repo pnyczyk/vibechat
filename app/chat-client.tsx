@@ -12,6 +12,7 @@ import {
 } from "./components/SessionControls";
 import { TranscriptDrawer } from "./components/TranscriptDrawer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
+import { logTelemetry, type TelemetryTransport } from "./lib/analytics";
 import { createRealtimeSession } from "./lib/realtime-session-factory";
 
 type VoiceActivityState = {
@@ -125,6 +126,11 @@ export function ChatClient() {
     setStatus("connecting");
 
     let newSession: RealtimeSession | null = null;
+    const startTime =
+      typeof performance !== "undefined" && typeof performance.now === "function"
+        ? performance.now()
+        : Date.now();
+    let transport: TelemetryTransport = "realtime";
 
     try {
       const { session: createdSession, requiresToken } = createRealtimeSession(
@@ -133,6 +139,9 @@ export function ChatClient() {
       );
 
       newSession = createdSession;
+      transport = requiresToken ? "realtime" : "mock";
+
+      logTelemetry("session_connect_attempt", { transport });
 
       let apiKey = "mock-api-key";
       if (requiresToken) {
@@ -163,6 +172,13 @@ export function ChatClient() {
       setFeedback({ message: "Connected to session", severity: "success" });
       setMuted(Boolean(newSession.muted));
       setVoiceActivity(defaultVoiceActivityState);
+
+      const endTime =
+        typeof performance !== "undefined" && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
+      const durationMs = Math.max(0, endTime - startTime);
+      logTelemetry("session_connect_success", { durationMs, transport });
     } catch (err) {
       console.error("Failed to connect realtime session", err);
       newSession?.close();
@@ -171,8 +187,9 @@ export function ChatClient() {
       setError(message);
       setFeedback({ message, severity: "error" });
       setVoiceActivity(defaultVoiceActivityState);
+      logTelemetry("session_connect_failure", { message, transport });
     }
-  }, [agent, audioElement, session, status]);
+  }, [agent, audioElement, logTelemetry, session, status]);
 
   const handleDisconnect = useCallback(() => {
     session?.close();
@@ -183,7 +200,8 @@ export function ChatClient() {
     setFeedback({ message: "Disconnected from session", severity: "success" });
     setVoiceActivity(defaultVoiceActivityState);
     setIsTranscriptOpen(false);
-  }, [session]);
+    logTelemetry("session_disconnect", { reason: "user" });
+  }, [logTelemetry, session]);
 
   const handleToggleMute = useCallback(() => {
     if (!session) {
@@ -202,27 +220,39 @@ export function ChatClient() {
         message: nextMuted ? "Microphone muted" : "Microphone active",
         severity: "success",
       });
+      logTelemetry(nextMuted ? "session_mute_enabled" : "session_mute_disabled", {});
     } catch (err) {
       console.error("Failed to toggle microphone", err);
       const message = err instanceof Error ? err.message : "Unexpected error";
       setFeedback({ message, severity: "error" });
       setError(message);
     }
-  }, [muted, session]);
+  }, [logTelemetry, muted, session]);
 
   const handleToggleTranscript = useCallback(() => {
-    setIsTranscriptOpen((previous) => !previous);
-  }, []);
+    setIsTranscriptOpen((previous) => {
+      const next = !previous;
+      logTelemetry(next ? "transcript_opened" : "transcript_closed", {});
+      return next;
+    });
+  }, [logTelemetry]);
 
   const handleCloseTranscript = useCallback(() => {
-    setIsTranscriptOpen(false);
-  }, []);
+    setIsTranscriptOpen((previous) => {
+      if (!previous) {
+        return previous;
+      }
+      logTelemetry("transcript_closed", {});
+      return false;
+    });
+  }, [logTelemetry]);
 
   const handleSendTranscriptMessage = useCallback(
     async (text: string) => {
       try {
         transcriptStore.sendTextMessage(text);
         setFeedback({ message: "Message sent", severity: "success" });
+        logTelemetry("transcript_message_sent", { length: text.length });
       } catch (err) {
         console.error("Failed to send transcript message", err);
         const message =
@@ -231,7 +261,7 @@ export function ChatClient() {
         throw err instanceof Error ? err : new Error(message);
       }
     },
-    [transcriptStore],
+    [logTelemetry, transcriptStore],
   );
 
   const handleFeedbackClose = useCallback(() => {

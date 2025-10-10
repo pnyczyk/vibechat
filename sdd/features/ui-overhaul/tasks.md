@@ -180,7 +180,7 @@ Create a Playwright test covering connect, mute/unmute, transcript drawer, and v
 ---
 
 ## Task T009: Telemetry & Support Instrumentation
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T003, T004, T006
 **Files:**
 - `app/chat-client.tsx`
