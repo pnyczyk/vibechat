@@ -14,6 +14,8 @@ type RenderProps = {
   muted?: boolean;
   onToggleMute?: () => void;
   onFeedbackClose?: () => void;
+  transcriptOpen?: boolean;
+  onToggleTranscript?: () => void;
 };
 
 function renderSessionControls({
@@ -24,6 +26,8 @@ function renderSessionControls({
   muted = false,
   onToggleMute = jest.fn(),
   onFeedbackClose = jest.fn(),
+  transcriptOpen = false,
+  onToggleTranscript = jest.fn(),
 }: RenderProps = {}) {
   const theme = createTheme();
   const result = render(
@@ -36,6 +40,10 @@ function renderSessionControls({
         onToggleMute={onToggleMute}
         feedback={feedback}
         onFeedbackClose={onFeedbackClose}
+        voiceActive={false}
+        voiceHasMetrics={false}
+        transcriptOpen={transcriptOpen}
+        onToggleTranscript={onToggleTranscript}
       />
     </ThemeProvider>,
   );
@@ -46,6 +54,7 @@ function renderSessionControls({
     onDisconnect,
     onToggleMute,
     onFeedbackClose,
+    onToggleTranscript,
   };
 }
 
@@ -131,5 +140,15 @@ describe("SessionControls", () => {
     expect(
       screen.getByRole("button", { name: /unmute microphone/i }),
     ).toBeInTheDocument();
+  });
+
+  it("toggles transcript drawer when icon is clicked", () => {
+    const { onToggleTranscript } = renderSessionControls();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /open transcript drawer/i }),
+    );
+
+    expect(onToggleTranscript).toHaveBeenCalledTimes(1);
   });
 });

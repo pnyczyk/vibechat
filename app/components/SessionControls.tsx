@@ -15,6 +15,7 @@ import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import GraphicEqIcon from "@mui/icons-material/GraphicEq";
+import SubjectIcon from "@mui/icons-material/Subject";
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -33,6 +34,8 @@ export type SessionControlsProps = {
   onFeedbackClose: () => void;
   voiceActive: boolean;
   voiceHasMetrics: boolean;
+  transcriptOpen: boolean;
+  onToggleTranscript: () => void;
 };
 
 type VoiceActivityIndicatorProps = {
@@ -91,6 +94,8 @@ export function SessionControls({
   onFeedbackClose,
   voiceActive,
   voiceHasMetrics,
+  transcriptOpen,
+  onToggleTranscript,
 }: SessionControlsProps) {
   const isConnecting = status === "connecting";
   const isConnected = status === "connected";
@@ -109,6 +114,10 @@ export function SessionControls({
     : muted
       ? "Unmute microphone"
       : "Mute microphone";
+
+  const transcriptTooltip = transcriptOpen
+    ? "Close transcript drawer"
+    : "Open transcript drawer";
 
   const iconColor = isConnected ? "success" : isError ? "error" : "primary";
   const micColor = muted ? "error" : "primary";
@@ -191,6 +200,22 @@ export function SessionControls({
             </IconButton>
           </span>
         </Tooltip>
+        <Tooltip title={transcriptTooltip} placement="left">
+          <span>
+            <IconButton
+              aria-label={transcriptTooltip}
+              aria-expanded={transcriptOpen}
+              color={transcriptOpen ? "secondary" : "default"}
+              onClick={(event) => {
+                event.preventDefault();
+                onToggleTranscript();
+              }}
+              size="large"
+            >
+              <SubjectIcon fontSize="inherit" />
+            </IconButton>
+          </span>
+        </Tooltip>
         <VoiceActivityIndicator active={voiceActive} hasMetrics={voiceHasMetrics} />
       </Stack>
 
@@ -199,6 +224,7 @@ export function SessionControls({
         autoHideDuration={4500}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        message={null}
       >
         {feedback ? (
           <Alert
@@ -210,7 +236,7 @@ export function SessionControls({
           >
             {feedback.message}
           </Alert>
-        ) : null}
+        ) : undefined}
       </Snackbar>
     </>
   );
