@@ -62,6 +62,7 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 - Command: `npm test` (configure Jest + coverage)
 - Watch Mode: `npm test -- --watch`
 - CI Command: `npm test -- --ci` (add Playwright run once configured)
+- E2E: `npm run test:e2e` (spins Next dev server with mocked realtime session)
 
 ## Architecture Principles
 

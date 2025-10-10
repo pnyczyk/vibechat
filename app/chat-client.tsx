@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Typography from "@mui/material/Typography";
-import {
-  OpenAIRealtimeWebRTC,
-  RealtimeAgent,
-  RealtimeSession,
-} from "@openai/agents/realtime";
+import { RealtimeAgent, RealtimeSession } from "@openai/agents/realtime";
 import styles from "./chat-client.module.css";
 
 import {
@@ -16,6 +12,7 @@ import {
 } from "./components/SessionControls";
 import { TranscriptDrawer } from "./components/TranscriptDrawer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
+import { createRealtimeSession } from "./lib/realtime-session-factory";
 
 type VoiceActivityState = {
   level: number;
@@ -127,37 +124,40 @@ export function ChatClient() {
     setMuted(false);
     setStatus("connecting");
 
+    let newSession: RealtimeSession | null = null;
+
     try {
-      const response = await fetch("/api/realtime-token");
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        const message =
-          typeof body.error === "string"
-            ? body.error
-            : `Token endpoint returned ${response.status}`;
-        throw new Error(message);
+      const { session: createdSession, requiresToken } = createRealtimeSession(
+        agent,
+        audioElement,
+      );
+
+      newSession = createdSession;
+
+      let apiKey = "mock-api-key";
+      if (requiresToken) {
+        const response = await fetch("/api/realtime-token");
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          const message =
+            typeof body.error === "string"
+              ? body.error
+              : `Token endpoint returned ${response.status}`;
+          throw new Error(message);
+        }
+
+        const secret = await response.json();
+        const resolvedKey =
+          typeof secret?.value === "string"
+            ? secret.value
+            : secret?.client_secret?.value;
+        if (!resolvedKey) {
+          throw new Error("Realtime token response missing value");
+        }
+        apiKey = resolvedKey;
       }
 
-      const secret = await response.json();
-      const apiKey =
-        typeof secret?.value === "string"
-          ? secret.value
-          : secret?.client_secret?.value;
-      if (!apiKey) {
-        throw new Error("Realtime token response missing value");
-      }
-
-      const transport =
-        audioElement && typeof window !== "undefined"
-          ? new OpenAIRealtimeWebRTC({ audioElement })
-          : undefined;
-
-      const newSession = new RealtimeSession(agent, {
-        model: "gpt-realtime",
-        ...(transport ? { transport } : {}),
-      });
-
-      await newSession.connect({ apiKey });
+      await newSession.connect({ apiKey, model: "gpt-realtime" });
       setSession(newSession);
       setStatus("connected");
       setFeedback({ message: "Connected to session", severity: "success" });
@@ -165,13 +165,14 @@ export function ChatClient() {
       setVoiceActivity(defaultVoiceActivityState);
     } catch (err) {
       console.error("Failed to connect realtime session", err);
+      newSession?.close();
       setStatus("error");
       const message = err instanceof Error ? err.message : "Unexpected error";
       setError(message);
       setFeedback({ message, severity: "error" });
       setVoiceActivity(defaultVoiceActivityState);
     }
-  }, [agent, session, status]);
+  }, [agent, audioElement, session, status]);
 
   const handleDisconnect = useCallback(() => {
     session?.close();

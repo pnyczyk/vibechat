@@ -159,7 +159,7 @@ Create a Material UI drawer that slides from the right, occupies ≤30% width, a
 ---
 
 ## Task T008: Author End-to-End Scenario
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T004, T005, T007
 **Files:**
 - `tests/e2e/ui-overhaul.spec.ts`

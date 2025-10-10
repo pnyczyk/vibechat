@@ -206,6 +206,7 @@ export function SessionControls({
               aria-label={transcriptTooltip}
               aria-expanded={transcriptOpen}
               color={transcriptOpen ? "secondary" : "default"}
+              data-testid="transcript-toggle"
               onClick={(event) => {
                 event.preventDefault();
                 onToggleTranscript();

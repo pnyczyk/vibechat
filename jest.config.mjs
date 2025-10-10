@@ -9,6 +9,7 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   moduleDirectories: ['node_modules', '<rootDir>/'],
+  testPathIgnorePatterns: ['<rootDir>/tests/e2e/'],
 };
 
 export default createJestConfig(customJestConfig);
