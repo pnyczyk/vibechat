@@ -126,10 +126,8 @@ export function ChatClient() {
     }
 
     const legacyListener = (event: MediaQueryListEvent) => handleChange(event);
-    // @ts-expect-error - addListener is deprecated but needed for older browsers
     mediaQuery.addListener(legacyListener);
     return () => {
-      // @ts-expect-error - removeListener is deprecated but needed for older browsers
       mediaQuery.removeListener(legacyListener);
     };
   }, []);

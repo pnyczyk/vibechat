@@ -2,17 +2,43 @@ import type {
   RealtimeAgent,
   RealtimeItem,
   RealtimeSessionConnectOptions,
-  RealtimeUserInput,
 } from "@openai/agents/realtime";
 
 type Listener = (...args: any[]) => void;
 
+type MockRealtimeUserInputContent =
+  | {
+      type: "input_text";
+      text: string;
+    }
+  | {
+      type: "output_text";
+      text: string;
+    }
+  | {
+      type: "input_image";
+      image: string;
+      providerData?: Record<string, unknown>;
+    }
+  | {
+      type: string;
+      [key: string]: unknown;
+    };
+
+type MockRealtimeUserInput =
+  | string
+  | {
+      type: "message";
+      role: "user";
+      content: MockRealtimeUserInputContent[];
+    };
+
 type TextContent = Extract<
-  RealtimeUserInput["content"][number],
+  MockRealtimeUserInputContent,
   { type: "input_text" | "output_text"; text: string }
 >;
 
-function isTextContent(part: RealtimeUserInput["content"][number]): part is TextContent {
+function isTextContent(part: MockRealtimeUserInputContent): part is TextContent {
   return (
     (part.type === "input_text" || part.type === "output_text") &&
     typeof part.text === "string"
@@ -94,14 +120,20 @@ export class MockRealtimeSession {
     return this.level;
   }
 
-  sendMessage(message: RealtimeUserInput): void {
+  sendMessage(message: MockRealtimeUserInput): void {
     if (this.closed) {
       throw new Error("Session closed");
     }
 
-    const text = message.content
-      .filter(isTextContent)
-      .map((part) => part.text.trim())
+    const textChunks =
+      typeof message === "string"
+        ? [message]
+        : message.content
+            .filter(isTextContent)
+            .map((part) => part.text);
+
+    const text = textChunks
+      .map((part) => part.trim())
       .filter(Boolean)
       .join(" ");
 
