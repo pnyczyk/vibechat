@@ -56,7 +56,6 @@ function renderSessionControls({
 
   return {
     ...result,
-    onConnect,
     onDisconnect,
     onToggleMute,
     onFeedbackClose,
@@ -66,16 +65,6 @@ function renderSessionControls({
 }
 
 describe("SessionControls", () => {
-  it("invokes connect handler when disconnected", () => {
-    const { onConnect } = renderSessionControls();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: /connect to session/i }),
-    );
-
-    expect(onConnect).toHaveBeenCalledTimes(1);
-  });
-
   it("invokes disconnect handler when connected", () => {
     const { onDisconnect } = renderSessionControls({ status: "connected" });
 
@@ -86,23 +75,12 @@ describe("SessionControls", () => {
     expect(onDisconnect).toHaveBeenCalledTimes(1);
   });
 
-  it("does not trigger handlers while connecting", () => {
-    const { onConnect, onDisconnect } = renderSessionControls({
-      status: "connecting",
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /connecting/i }));
-
-    expect(onConnect).not.toHaveBeenCalled();
-    expect(onDisconnect).not.toHaveBeenCalled();
-  });
-
-  it("indicates error state via reconnect tooltip", () => {
-    renderSessionControls({ status: "error" });
+  it("hides the disconnect control until a session is connected", () => {
+    renderSessionControls();
 
     expect(
-      screen.getByRole("button", { name: /reconnect to session/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /disconnect session/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders snackbar feedback and closes via the dismiss action", () => {

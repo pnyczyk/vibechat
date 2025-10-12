@@ -115,7 +115,7 @@ describe("ChatClient telemetry", () => {
   it("emits events for successful connect flow", async () => {
     renderClient();
 
-    const connectButton = screen.getByRole("button", { name: /connect to session/i });
+    const connectButton = screen.getByRole("button", { name: /start voice session/i });
     fireEvent.click(connectButton);
 
     await waitFor(() => expect(activeSession.connect).toHaveBeenCalledTimes(1));
@@ -141,7 +141,7 @@ describe("ChatClient telemetry", () => {
 
     renderClient();
 
-    const connectButton = screen.getByRole("button", { name: /connect to session/i });
+    const connectButton = screen.getByRole("button", { name: /start voice session/i });
     await act(async () => {
       fireEvent.click(connectButton);
     });
@@ -158,7 +158,7 @@ describe("ChatClient telemetry", () => {
   it("logs mute and transcript interactions", async () => {
     renderClient();
 
-    const connectButton = screen.getByRole("button", { name: /connect to session/i });
+    const connectButton = screen.getByRole("button", { name: /start voice session/i });
     fireEvent.click(connectButton);
     await waitFor(() => expect(activeSession.connect).toHaveBeenCalledTimes(1));
 
@@ -187,7 +187,7 @@ describe("ChatClient telemetry", () => {
   it("logs disconnect telemetry", async () => {
     renderClient();
 
-    const connectButton = screen.getByRole("button", { name: /connect to session/i });
+    const connectButton = screen.getByRole("button", { name: /start voice session/i });
     fireEvent.click(connectButton);
     await waitFor(() => expect(activeSession.connect).toHaveBeenCalledTimes(1));
 

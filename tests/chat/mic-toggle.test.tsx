@@ -80,7 +80,7 @@ describe("ChatClient microphone toggle", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: /connect to session/i }),
+      screen.getByRole("button", { name: /start voice session/i }),
     );
 
     await waitFor(() => expect(sessionInstances.length).toBe(1));

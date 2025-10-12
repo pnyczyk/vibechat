@@ -75,7 +75,7 @@ describe("ChatClient voice meter", () => {
       </Providers>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /connect to session/i }));
+    fireEvent.click(screen.getByRole("button", { name: /start voice session/i }));
 
     await waitFor(() => expect(sessionInstances.length).toBe(1));
     const session = sessionInstances[0];
