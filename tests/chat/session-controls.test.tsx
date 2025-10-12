@@ -16,6 +16,8 @@ type RenderProps = {
   onFeedbackClose?: () => void;
   transcriptOpen?: boolean;
   onToggleTranscript?: () => void;
+  themeMode?: "light" | "dark";
+  onToggleTheme?: () => void;
 };
 
 function renderSessionControls({
@@ -28,6 +30,8 @@ function renderSessionControls({
   onFeedbackClose = jest.fn(),
   transcriptOpen = false,
   onToggleTranscript = jest.fn(),
+  themeMode = "light",
+  onToggleTheme,
 }: RenderProps = {}) {
   const theme = createTheme();
   const result = render(
@@ -44,6 +48,8 @@ function renderSessionControls({
         voiceHasMetrics={false}
         transcriptOpen={transcriptOpen}
         onToggleTranscript={onToggleTranscript}
+        themeMode={themeMode}
+        onToggleTheme={onToggleTheme}
       />
     </ThemeProvider>,
   );
@@ -55,6 +61,7 @@ function renderSessionControls({
     onToggleMute,
     onFeedbackClose,
     onToggleTranscript,
+    onToggleTheme,
   };
 }
 
@@ -150,5 +157,18 @@ describe("SessionControls", () => {
     );
 
     expect(onToggleTranscript).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders theme toggle placeholder disabled by default", () => {
+    renderSessionControls();
+
+    const themeButton = screen.getByRole("button", { name: /switch to dark mode/i });
+    expect(themeButton).toBeDisabled();
+  });
+
+  it("exposes edge-aligned metadata for layout styling", () => {
+    renderSessionControls();
+
+    expect(screen.getByTestId("session-controls")).toHaveAttribute("data-align", "edge");
   });
 });
