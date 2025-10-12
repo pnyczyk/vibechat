@@ -107,11 +107,37 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 - Update SDD specs/tasks alongside feature work; keep `sdd/features.md` current
 - Add focused README sections when introducing new agent capabilities
 
-### Git Workflow
-- Check status of GitHub issues and pull requests before starting to do anything with code and before answerwing questions on develeopment status.
-- Use feature branches; follow Conventional Commit messages
-- Require PR review before merging into main
-- Track every SDD task as a GitHub issue using GitHub CLI (`gh issue` commands) and keep status in sync when tasks progress
+### GitHub Sync Workflow
+- Start every coding session by running `gh issue status` and `gh pr status` to understand active work and before answering status questions.
+- Search before creating new work: `gh issue list --label sdd --search "<keywords>"` to avoid duplicates.
+- Use `/sdd:*` outputs to drive GitHub updates immediately after generating specs or tasks.
+- Keep local notes in `/tmp/*.md` and pass them with `gh issue create --body-file <path>` or `gh issue comment`.
+
+### SDD ↔ GitHub Mapping
+- `spec drafted` → issue labelled `todo`; `tasks in progress` → issue labelled `in-progress`.
+- While implementing `/sdd:implement`, comment on the issue with status notes and link to the task.
+- When implementation completes, open a PR and add `Closes #<issue-number>` plus the current SDD task id.
+- After merge, run `gh issue edit <issue-number> --state closed` to finish the workflow.
+- Track every SDD task as a GitHub issue using GitHub CLI (`gh issue` commands) and keep status in sync as work progresses.
+
+### Issue Creation Standards
+- Titles follow `SDD: <feature>`; include scope, acceptance criteria, and test notes in the body template.
+- Always add labels `sdd` and a feature label such as `feature/voice`, and assign the current developer.
+- Capture markdown in a temporary file via here-doc before calling `gh issue create`.
+- Reference related specs, tasks, and telemetry tickets directly in the issue description.
+
+### Branching & Pull Requests
+- Always branch from `main` using `feat/<issue-number>-<slug>` (e.g. `feat/123-voice-prefetch`).
+- Document test evidence in the PR description, including `npm test` and `npm run test:e2e` results.
+- Ensure every PR description links the corresponding issue and mentions outstanding checklist items.
+- Keep commits scoped to the issue context and follow Conventional Commits.
+- Require PR review before merging into main.
+
+### In-Progress Updates
+- When starting implementation, comment on the issue with the `/sdd:implement` task id and branch name.
+- Post brief daily progress notes with blockers; include command output summaries when relevant.
+- After opening a PR, update the issue with the PR URL and adjust labels from `in-progress` to `review`.
+- Once merged, add a closing summary comment before setting the issue state to closed.
 
 ### Other
 - Instrument key voice/chat flows with telemetry for future tuning
