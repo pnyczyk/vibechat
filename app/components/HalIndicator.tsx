@@ -22,11 +22,11 @@ export function calculateHalGlow(
   active: boolean,
 ): HalGlowResult {
   if (!hasMetrics) {
-    return { intensity: 0.2, state: "waiting" };
+    return { intensity: 0.08, state: "waiting" };
   }
 
   const clampedLevel = clamp(level);
-  const idleIntensity = clamp(clampedLevel * 0.55 + 0.25, 0.25, 0.65);
+  const idleIntensity = clamp(clampedLevel * 0.55 + 0.22, 0.22, 0.6);
   const activeIntensity = clamp(clampedLevel * 0.65 + 0.45, 0.5, 1);
   const intensity = active ? activeIntensity : idleIntensity;
 

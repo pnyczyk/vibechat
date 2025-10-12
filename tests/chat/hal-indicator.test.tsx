@@ -7,7 +7,7 @@ describe("HalIndicator", () => {
 
     const indicator = getByTestId("voice-activity-indicator");
     expect(indicator).toHaveAttribute("data-state", "active");
-    expect(indicator.style.getPropertyValue("--hal-intensity")).toBe("0.975");
+    expect(indicator.style.getPropertyValue("--hal-intensity")).toBe("0.97");
   });
 
   it("falls back to waiting state when metrics unavailable", () => {
@@ -17,7 +17,7 @@ describe("HalIndicator", () => {
 
     const indicator = getByTestId("voice-activity-indicator");
     expect(indicator).toHaveAttribute("data-state", "waiting");
-    expect(indicator.style.getPropertyValue("--hal-intensity")).toBe("0.2");
+    expect(indicator.style.getPropertyValue("--hal-intensity")).toBe("0.08");
   });
 
   it("keeps glow calculation within performance budget", () => {
