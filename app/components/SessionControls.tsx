@@ -5,17 +5,15 @@ import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
-import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
-import Box from "@mui/material/Box";
-import { visuallyHidden } from "@mui/utils";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import PowerOffIcon from "@mui/icons-material/PowerOff";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
-import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import GraphicEqIcon from "@mui/icons-material/GraphicEq";
 import SubjectIcon from "@mui/icons-material/Subject";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import styles from "./controls.module.css";
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
@@ -36,6 +34,8 @@ export type SessionControlsProps = {
   voiceHasMetrics: boolean;
   transcriptOpen: boolean;
   onToggleTranscript: () => void;
+  themeMode?: "light" | "dark";
+  onToggleTheme?: (() => void) | null;
 };
 
 type VoiceActivityIndicatorProps = {
@@ -50,37 +50,21 @@ function VoiceActivityIndicator({ active, hasMetrics }: VoiceActivityIndicatorPr
       ? "AI is idle"
       : "Waiting for audio";
 
-  const Icon = active ? GraphicEqIcon : FiberManualRecordIcon;
-  const color = active ? "success.main" : hasMetrics ? "text.secondary" : "text.disabled";
-
   return (
-    <Box
+    <div
+      className={styles.voiceIndicator}
+      data-active={active ? "true" : "false"}
+      data-ready={hasMetrics ? "true" : "false"}
       role="status"
       aria-live="polite"
       aria-label={label}
       data-testid="voice-activity-indicator"
-      sx={{
-        mt: 2,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 999,
-        backgroundColor: (theme) => theme.palette.action.hover,
-        padding: "0.35rem 0.5rem",
-      }}
     >
-      <Icon
-        fontSize="small"
-        sx={{
-          color,
-          transition: "transform 180ms ease, color 180ms ease",
-          transform: active ? "scale(1.1)" : "scale(0.9)",
-        }}
-      />
-      <Box component="span" sx={visuallyHidden}>
+      <span className={styles.voiceIndicatorCore} aria-hidden="true" />
+      <span className={styles.srOnly}>
         {label}
-      </Box>
-    </Box>
+      </span>
+    </div>
   );
 }
 
@@ -96,6 +80,8 @@ export function SessionControls({
   voiceHasMetrics,
   transcriptOpen,
   onToggleTranscript,
+  themeMode = "light",
+  onToggleTheme,
 }: SessionControlsProps) {
   const isConnecting = status === "connecting";
   const isConnected = status === "connected";
@@ -118,6 +104,10 @@ export function SessionControls({
   const transcriptTooltip = transcriptOpen
     ? "Close transcript drawer"
     : "Open transcript drawer";
+  const resolvedThemeMode = themeMode === "dark" ? "dark" : "light";
+  const themeTooltip =
+    resolvedThemeMode === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  const themeDisabled = typeof onToggleTheme !== "function";
 
   const iconColor = isConnected ? "success" : isError ? "error" : "primary";
   const micColor = muted ? "error" : "primary";
@@ -146,14 +136,9 @@ export function SessionControls({
 
   return (
     <>
-      <Stack
-        direction="column"
-        spacing={1}
-        alignItems="center"
-        data-testid="session-controls"
-      >
+      <div className={styles.rail} data-testid="session-controls" data-align="edge">
         <Tooltip title={tooltipTitle} placement="left">
-          <span>
+          <span className={styles.iconWrapper}>
             <IconButton
               aria-label={tooltipTitle}
               aria-pressed={isConnected}
@@ -161,6 +146,7 @@ export function SessionControls({
               disabled={isConnecting}
               onClick={handleClick}
               size="large"
+              className={styles.iconButton}
             >
               {isConnecting ? (
                 <CircularProgress
@@ -177,7 +163,7 @@ export function SessionControls({
           </span>
         </Tooltip>
         <Tooltip title={micTooltip} placement="left">
-          <span>
+          <span className={styles.iconWrapper}>
             <IconButton
               aria-label={micTooltip}
               aria-pressed={muted}
@@ -191,6 +177,7 @@ export function SessionControls({
                 onToggleMute();
               }}
               size="large"
+              className={styles.iconButton}
             >
               {muted ? (
                 <MicOffIcon fontSize="inherit" />
@@ -201,7 +188,7 @@ export function SessionControls({
           </span>
         </Tooltip>
         <Tooltip title={transcriptTooltip} placement="left">
-          <span>
+          <span className={styles.iconWrapper}>
             <IconButton
               aria-label={transcriptTooltip}
               aria-expanded={transcriptOpen}
@@ -212,13 +199,39 @@ export function SessionControls({
                 onToggleTranscript();
               }}
               size="large"
+              className={styles.iconButton}
             >
               <SubjectIcon fontSize="inherit" />
             </IconButton>
           </span>
         </Tooltip>
+        <Tooltip title={themeTooltip} placement="left">
+          <span className={styles.iconWrapper}>
+            <IconButton
+              aria-label={themeTooltip}
+              aria-pressed={resolvedThemeMode === "dark"}
+              className={styles.iconButton}
+              color="default"
+              disabled={themeDisabled}
+              onClick={(event) => {
+                event.preventDefault();
+                if (themeDisabled) {
+                  return;
+                }
+                onToggleTheme?.();
+              }}
+              size="large"
+            >
+              {resolvedThemeMode === "dark" ? (
+                <LightModeIcon fontSize="inherit" />
+              ) : (
+                <DarkModeIcon fontSize="inherit" />
+              )}
+            </IconButton>
+          </span>
+        </Tooltip>
         <VoiceActivityIndicator active={voiceActive} hasMetrics={voiceHasMetrics} />
-      </Stack>
+      </div>
 
       <Snackbar
         open={Boolean(feedback)}

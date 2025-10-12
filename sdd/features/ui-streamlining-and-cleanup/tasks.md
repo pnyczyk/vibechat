@@ -25,7 +25,7 @@ Stretch the chat experience to fill the browser window in both dimensions and in
 ---
 
 ## Task T002: Rebuild Edge-Aligned Control Rail
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T001
 **Files:**
 - `app/components/SessionControls.tsx`
