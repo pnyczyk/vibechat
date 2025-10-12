@@ -6,6 +6,11 @@
 
 ## Pre-Implementation Validation
 
+### 0. Create & Link GitHub Issue
+- Every task must have an open GitHub issue before any code changes.
+- If the issue does not yet exist, create it using `gh issue create` with labels `sdd` and the relevant feature label (e.g., `feature/ui`). Use the task title (e.g., `SDD: <feature> <task-id>`) and capture the body in `/tmp/*.md` before invoking the CLI.
+- Record the issue number; it will be used in the branch name and later PR references.
+
 ### 1. Check Feature Exists
 Verify `sdd/features/{feature-name}/spec.md` exists. If not: "Feature not found. Create first: /sdd-spec {feature-name}"
 
@@ -22,8 +27,8 @@ If Completed: ask "Task {task-id} already completed. Re-implement? (yes/no)"
 If dependencies incomplete, show: "Task {task-id} blocked by: T001, T003. Complete dependencies first." Stop execution.
 
 ### 6. Confirm Git Workflow Alignment
-- Work from a feature branch named `feature/{feature-name}-{task-id}` (or equivalent). If on `main`, create the branch before continuing.
-- Ensure there is an open GitHub issue tracking the task (e.g., `[UI Overhaul] T001 ...`). Link subsequent commits/PR to that issue.
+- Work from a feature branch named `feat/{issue-number}-{short-slug}` (e.g., `feat/22-ui-streamlining`). If on `main`, create or rename the branch before continuing.
+- Ensure the branch description references the previously created GitHub issue. All commits and the eventual PR must reference that issue (`Closes #<issue-number>`).
 - Plan to raise a PR from the feature branch back to `main` after changes pass review.
 
 ## Context Loading

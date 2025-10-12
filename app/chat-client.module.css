@@ -1,18 +1,51 @@
 .main {
-  min-height: 100vh;
-  width: 100%;
+  position: relative;
   display: flex;
+  align-items: stretch;
   justify-content: center;
-  padding: clamp(2rem, 6vw, 4rem);
-  background-color: #ffffff;
+  width: 100vw;
+  height: 100vh;
+  min-width: 100vw;
+  min-height: 100vh;
+  background-color: var(--mui-palette-background-default, #ffffff);
+  overflow: hidden;
 }
 
 .layout {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: clamp(2rem, 4vw, 3rem);
-  width: min(1280px, 100%);
-  min-height: clamp(28rem, 70vh, 42rem);
+  align-items: stretch;
+  width: 100vw;
+  height: 100vh;
+  gap: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.layout::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    rgba(15, 23, 42, 0.32),
+    rgba(15, 23, 42, 0.38)
+  );
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout[data-dimmed="true"]::after {
+  opacity: 1;
+}
+
+.layout > * {
+  position: relative;
+  z-index: 1;
 }
 
 .canvas {
@@ -20,10 +53,13 @@
   flex-direction: column;
   gap: clamp(1.5rem, 2vw, 2.5rem);
   padding: clamp(2.5rem, 5vw, 3.75rem);
-  border-radius: 24px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background-color: #ffffff;
-  box-shadow: 0 32px 64px rgba(15, 23, 42, 0.08);
+  border-radius: 0;
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+  height: 100%;
+  max-height: 100%;
+  overflow: auto;
 }
 
 .header {
@@ -42,10 +78,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 18px;
-  border: 1px dashed rgba(148, 163, 184, 0.8);
-  background: rgba(241, 245, 249, 0.45);
-  color: rgba(71, 85, 105, 0.9);
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
   text-align: center;
   padding: 1.5rem;
 }
@@ -67,7 +103,9 @@
 .controlRail {
   display: flex;
   justify-content: flex-end;
-  align-items: stretch;
+  align-items: center;
+  height: 100%;
+  padding: 0;
 }
 
 .controlRailInner {
@@ -95,6 +133,7 @@
 
   .controlRail {
     justify-content: center;
+    height: auto;
   }
 
   .controlRailInner {
@@ -105,11 +144,11 @@
 
 @media (max-width: 640px) {
   .main {
-    padding: clamp(1.5rem, 6vw, 2rem);
+    padding: 0;
   }
 
   .canvas {
-    padding: clamp(1.75rem, 6vw, 2.25rem);
+    padding: clamp(1.25rem, 5vw, 1.75rem);
   }
 
   .controlRailInner {

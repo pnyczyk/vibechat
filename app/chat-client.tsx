@@ -454,10 +454,13 @@ export function ChatClient() {
     };
   }, [audioElement, session, status]);
 
+  const isDimmed = status !== "connected";
+
   return (
     <div
       className={styles.layout}
       data-layout={isCompactLayout ? "compact" : "wide"}
+      data-dimmed={isDimmed ? "true" : "false"}
     >
       <main className={styles.canvas} aria-labelledby="chat-title">
         <header className={styles.header}>
