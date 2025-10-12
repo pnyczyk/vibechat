@@ -47,7 +47,7 @@ Refactor the control rail into a minimalist right-edge icon stack, remove visibl
 ---
 
 ## Task T003: Implement Lightning Entry Flow
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T001
 **Files:**
 - `app/chat-client.tsx`

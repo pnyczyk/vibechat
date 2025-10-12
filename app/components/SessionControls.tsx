@@ -2,12 +2,10 @@
 
 import { MouseEvent, SyntheticEvent } from "react";
 import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
 import Tooltip from "@mui/material/Tooltip";
-import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
-import PowerOffIcon from "@mui/icons-material/PowerOff";
+import LogoutIcon from "@mui/icons-material/Logout";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
 import SubjectIcon from "@mui/icons-material/Subject";
@@ -70,7 +68,7 @@ function VoiceActivityIndicator({ active, hasMetrics }: VoiceActivityIndicatorPr
 
 export function SessionControls({
   status,
-  onConnect,
+  onConnect: _onConnect,
   onDisconnect,
   muted,
   onToggleMute,
@@ -85,15 +83,6 @@ export function SessionControls({
 }: SessionControlsProps) {
   const isConnecting = status === "connecting";
   const isConnected = status === "connected";
-  const isError = status === "error";
-
-  const tooltipTitle = isConnected
-    ? "Disconnect session"
-    : isConnecting
-      ? "Connecting…"
-      : isError
-        ? "Reconnect to session"
-        : "Connect to session";
 
   const micTooltip = !isConnected
     ? "Connect to enable microphone"
@@ -109,22 +98,13 @@ export function SessionControls({
     resolvedThemeMode === "dark" ? "Switch to light mode" : "Switch to dark mode";
   const themeDisabled = typeof onToggleTheme !== "function";
 
-  const iconColor = isConnected ? "success" : isError ? "error" : "primary";
+  const disconnectColor = "error";
   const micColor = muted ? "error" : "primary";
   const micDisabled = !isConnected || isConnecting;
 
-  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+  const handleDisconnectClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    if (isConnecting) {
-      return;
-    }
-
-    if (isConnected) {
-      onDisconnect();
-      return;
-    }
-
-    onConnect();
+    onDisconnect();
   };
 
   const handleSnackbarClose = (_: SyntheticEvent | Event, reason?: string) => {
@@ -137,31 +117,22 @@ export function SessionControls({
   return (
     <>
       <div className={styles.rail} data-testid="session-controls" data-align="edge">
-        <Tooltip title={tooltipTitle} placement="left">
-          <span className={styles.iconWrapper}>
-            <IconButton
-              aria-label={tooltipTitle}
-              aria-pressed={isConnected}
-              color={iconColor}
-              disabled={isConnecting}
-              onClick={handleClick}
-              size="large"
-              className={styles.iconButton}
-            >
-              {isConnecting ? (
-                <CircularProgress
-                  size={26}
-                  role="progressbar"
-                  aria-label="Connecting"
-                />
-              ) : isConnected ? (
-                <PowerOffIcon fontSize="inherit" />
-              ) : (
-                <PowerSettingsNewIcon fontSize="inherit" />
-              )}
-            </IconButton>
-          </span>
-        </Tooltip>
+        {isConnected ? (
+          <Tooltip title="Disconnect session" placement="left">
+            <span className={styles.iconWrapper}>
+              <IconButton
+                aria-label="Disconnect session"
+                aria-pressed
+                color={disconnectColor}
+                onClick={handleDisconnectClick}
+                size="large"
+                className={styles.iconButton}
+              >
+                <LogoutIcon fontSize="inherit" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        ) : null}
         <Tooltip title={micTooltip} placement="left">
           <span className={styles.iconWrapper}>
             <IconButton

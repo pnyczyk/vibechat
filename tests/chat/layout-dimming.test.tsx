@@ -119,7 +119,7 @@ describe("UI streamlining viewport and dimming behaviour", () => {
     const layout = document.querySelector("[data-dimmed]");
     expect(layout).toHaveAttribute("data-dimmed", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: /connect to session/i }));
+    fireEvent.click(screen.getByRole("button", { name: /start voice session/i }));
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /disconnect session/i })).toBeInTheDocument(),
@@ -130,7 +130,7 @@ describe("UI streamlining viewport and dimming behaviour", () => {
     fireEvent.click(screen.getByRole("button", { name: /disconnect session/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /connect to session/i })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: /start voice session/i })).toBeInTheDocument(),
     );
 
     expect(layout).toHaveAttribute("data-dimmed", "true");

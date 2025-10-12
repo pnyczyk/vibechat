@@ -10,6 +10,7 @@ import {
   SessionFeedback,
   ConnectionStatus,
 } from "./components/SessionControls";
+import { EntryOverlay } from "./components/EntryOverlay";
 import { TranscriptDrawer } from "./components/TranscriptDrawer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
 import { logTelemetry, type TelemetryTransport } from "./lib/analytics";
@@ -463,6 +464,7 @@ export function ChatClient() {
       data-dimmed={isDimmed ? "true" : "false"}
     >
       <main className={styles.canvas} aria-labelledby="chat-title">
+        <EntryOverlay status={status} error={error} onConnect={handleConnect} />
         <header className={styles.header}>
           <Typography
             id="chat-title"
