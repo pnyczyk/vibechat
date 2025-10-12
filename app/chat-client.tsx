@@ -515,6 +515,7 @@ export function ChatClient() {
             onFeedbackClose={handleFeedbackClose}
             voiceActive={voiceActivity.active}
             voiceHasMetrics={voiceActivity.hasMetrics}
+            voiceLevel={voiceActivity.level}
             transcriptOpen={isTranscriptOpen}
             onToggleTranscript={handleToggleTranscript}
           />

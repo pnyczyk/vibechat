@@ -11,6 +11,7 @@ import MicOffIcon from "@mui/icons-material/MicOff";
 import SubjectIcon from "@mui/icons-material/Subject";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
+import { HalIndicator } from "./HalIndicator";
 import styles from "./controls.module.css";
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
@@ -30,41 +31,12 @@ export type SessionControlsProps = {
   onFeedbackClose: () => void;
   voiceActive: boolean;
   voiceHasMetrics: boolean;
+  voiceLevel: number;
   transcriptOpen: boolean;
   onToggleTranscript: () => void;
   themeMode?: "light" | "dark";
   onToggleTheme?: (() => void) | null;
 };
-
-type VoiceActivityIndicatorProps = {
-  active: boolean;
-  hasMetrics: boolean;
-};
-
-function VoiceActivityIndicator({ active, hasMetrics }: VoiceActivityIndicatorProps) {
-  const label = active
-    ? "AI is speaking"
-    : hasMetrics
-      ? "AI is idle"
-      : "Waiting for audio";
-
-  return (
-    <div
-      className={styles.voiceIndicator}
-      data-active={active ? "true" : "false"}
-      data-ready={hasMetrics ? "true" : "false"}
-      role="status"
-      aria-live="polite"
-      aria-label={label}
-      data-testid="voice-activity-indicator"
-    >
-      <span className={styles.voiceIndicatorCore} aria-hidden="true" />
-      <span className={styles.srOnly}>
-        {label}
-      </span>
-    </div>
-  );
-}
 
 export function SessionControls({
   status,
@@ -76,6 +48,7 @@ export function SessionControls({
   onFeedbackClose,
   voiceActive,
   voiceHasMetrics,
+  voiceLevel,
   transcriptOpen,
   onToggleTranscript,
   themeMode = "light",
@@ -201,7 +174,13 @@ export function SessionControls({
             </IconButton>
           </span>
         </Tooltip>
-        <VoiceActivityIndicator active={voiceActive} hasMetrics={voiceHasMetrics} />
+        <span className={styles.halIndicatorWrapper}>
+          <HalIndicator
+            active={voiceActive}
+            hasMetrics={voiceHasMetrics}
+            level={voiceLevel}
+          />
+        </span>
       </div>
 
       <Snackbar
