@@ -8,7 +8,7 @@ Spec-Driven Development flips traditional coding: instead of writing code then d
 
 ## The 4-Command Workflow
 
-### 1. `/sdd-init`
+### 1. `/prompts:sdd-init`
 **Initialize SDD workflow**
 
 Sets up your project for spec-driven development:
@@ -19,13 +19,13 @@ Sets up your project for spec-driven development:
 
 **Run once** per project to set up the workflow.
 
-### 2. `/sdd-spec [feature-name]`
+### 2. `/prompts:sdd-spec [feature-name]`
 **Create a feature specification**
 
 Start by defining WHAT you want to build and WHY (not HOW - that comes from AGENTS.md).
 
 ```bash
-/sdd-spec user-authentication
+/prompts:sdd-spec user-authentication
 ```
 
 AI will brainstorm with you to create `sdd/features/user-authentication/spec.md` with:
@@ -39,13 +39,13 @@ AI will brainstorm with you to create `sdd/features/user-authentication/spec.md`
 
 ---
 
-### 3. `/sdd-tasks [feature-name]`
+### 3. `/prompts:sdd-tasks [feature-name]`
 **Generate implementation tasks**
 
 AI reads your AGENTS.md (tech stack, standards) and spec (requirements) to break work into bite-sized tasks.
 
 ```bash
-/sdd-tasks user-authentication
+/prompts:sdd-tasks user-authentication
 ```
 
 Creates `sdd/features/user-authentication/tasks.md` with:
@@ -58,13 +58,13 @@ Creates `sdd/features/user-authentication/tasks.md` with:
 
 ---
 
-### 4. `/sdd-implement [feature-name] [task-id]`
+### 4. `/prompts:sdd-implement [feature-name] [task-id]`
 **Implement one task at a time**
 
 AI loads full context (AGENTS.md + spec + task), writes code, runs tests, and shows you results.
 
 ```bash
-/sdd-implement user-authentication T001
+/prompts:sdd-implement user-authentication T001
 ```
 
 For each task:
@@ -98,27 +98,27 @@ See: [AGENTS.md Standard](https://agents.md/)
 
 ```bash
 # 1. Initialize (run once per project)
-/sdd-init
+/prompts:sdd-init
 
 # 2. Create feature spec (AI brainstorms with you)
-/sdd-spec photo-albums
+/prompts:sdd-spec photo-albums
 
 # 3. Generate tasks (AI breaks down into T001-T008)
-/sdd-tasks photo-albums
+/prompts:sdd-tasks photo-albums
 
 # 4. Implement tasks one by one
-/sdd-implement photo-albums T001
+/prompts:sdd-implement photo-albums T001
 # Shows: verification + status + what's next
 
-/sdd-implement photo-albums T002
+/prompts:sdd-implement photo-albums T002
 # Shows: verification + status + what's next
 
-/sdd-implement photo-albums T003
+/prompts:sdd-implement photo-albums T003
 # Shows: verification + status + what's next
 
 # ... continue until all tasks done ...
 
-/sdd-implement photo-albums T008
+/prompts:sdd-implement photo-albums T008
 # Shows: FEATURE COMPLETE with full report
 ```
 

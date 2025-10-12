@@ -7,10 +7,10 @@
 ## Validation
 
 1. **Check spec exists:** `sdd/features/{feature-name}/spec.md`
-   - If not found: "Feature not found: {feature-name}. Create spec first: /sdd-spec {feature-name}"
+   - If not found: "Feature not found: {feature-name}. Create spec first: /prompts:sdd-spec {feature-name}"
 
 2. **Check AGENTS.md exists** at project root
-   - If not found: "AGENTS.md not found. Run /sdd-init first."
+   - If not found: "AGENTS.md not found. Run /prompts:sdd-init first."
 
 ## Load Context
 
@@ -101,7 +101,7 @@ Parallelization: A parallel, B sequential
 Dependency Chain:
 T001 → [T002, T003, T004] → T005 → [T006, T007] → T008
 
-Next: /sdd-implement {feature-name} T001
+Next: /prompts:sdd-implement {feature-name} T001
 ```
 
 ## Guidelines
