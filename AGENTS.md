@@ -1,7 +1,7 @@
 # vibechat
 
 Codex CLI slash-command prompts should read this file to preload project rules before generating code.
-Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference it.
+Store the prompts under `~/.codex/prompts/` so `/prompts:sdd-*` commands can reference it.
 
 **All AI-generated code must follow these guidelines.**
 
@@ -110,12 +110,12 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 ### GitHub Sync Workflow
 - Start every coding session by running `gh issue status` and `gh pr status` to understand active work and before answering status questions.
 - Search before creating new work: `gh issue list --label sdd --search "<keywords>"` to avoid duplicates.
-- Use `/sdd:*` outputs to drive GitHub updates immediately after generating specs or tasks.
+- Use `/prompts:sdd-*` outputs to drive GitHub updates immediately after generating specs or tasks.
 - Keep local notes in `/tmp/*.md` and pass them with `gh issue create --body-file <path>` or `gh issue comment`.
 
 ### SDD ↔ GitHub Mapping
 - `spec drafted` → issue labelled `todo`; `tasks in progress` → issue labelled `in-progress`.
-- While implementing `/sdd:implement`, comment on the issue with status notes and link to the task.
+- While implementing `/prompts:sdd-implement`, comment on the issue with status notes and link to the task.
 - When implementation completes, open a PR and add `Closes #<issue-number>` plus the current SDD task id.
 - After merge, run `gh issue edit <issue-number> --state closed` to finish the workflow.
 - Track every SDD task as a GitHub issue using GitHub CLI (`gh issue` commands) and keep status in sync as work progresses.
@@ -134,7 +134,7 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 - Require PR review before merging into main.
 
 ### In-Progress Updates
-- When starting implementation, comment on the issue with the `/sdd:implement` task id and branch name.
+- When starting implementation, comment on the issue with the `/prompts:sdd-implement` task id and branch name.
 - Post brief daily progress notes with blockers; include command output summaries when relevant.
 - After opening a PR, update the issue with the PR URL and adjust labels from `in-progress` to `review`.
 - Once merged, add a closing summary comment before setting the issue state to closed.
@@ -147,9 +147,9 @@ Store the prompts under `~/.codex/prompts/` so `/sdd:*` commands can reference i
 This project uses Spec-Driven Development (SDD). See sdd/README.md for full workflow guide.
 
 Commands:
-- /sdd:spec [name] - Create feature specification
-- /sdd:tasks [name] - Generate implementation tasks
-- /sdd:implement [name] [task-id] - Implement single task
+- `/prompts:sdd-spec [name]` - Create feature specification
+- `/prompts:sdd-tasks [name]` - Generate implementation tasks
+- `/prompts:sdd-implement [name] [task-id]` - Implement single task
 
 Documentation:
 - sdd/README.md - Workflow overview

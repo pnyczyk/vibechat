@@ -122,9 +122,9 @@ Example: "vibechat is a [type of application] for [target users]. It provides [k
 This project uses Spec-Driven Development (SDD). See sdd/README.md for full workflow guide.
 
 Commands:
-- /sdd-spec [name] - Create feature specification
-- /sdd-tasks [name] - Generate implementation tasks
-- /sdd-implement [name] [task-id] - Implement single task
+- `/prompts:sdd-spec [name]` - Create feature specification
+- `/prompts:sdd-tasks [name]` - Generate implementation tasks
+- `/prompts:sdd-implement [name] [task-id]` - Implement single task
 
 Documentation:
 - sdd/README.md - Workflow overview

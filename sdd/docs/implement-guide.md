@@ -12,10 +12,10 @@
 - Record the issue number; it will be used in the branch name and later PR references.
 
 ### 1. Check Feature Exists
-Verify `sdd/features/{feature-name}/spec.md` exists. If not: "Feature not found. Create first: /sdd-spec {feature-name}"
+Verify `sdd/features/{feature-name}/spec.md` exists. If not: "Feature not found. Create first: /prompts:sdd-spec {feature-name}"
 
 ### 2. Check Tasks File Exists
-Verify `sdd/features/{feature-name}/tasks.md` exists. If not: "Tasks not found. Generate first: /sdd-tasks {feature-name}"
+Verify `sdd/features/{feature-name}/tasks.md` exists. If not: "Tasks not found. Generate first: /prompts:sdd-tasks {feature-name}"
 
 ### 3. Parse Task
 Read `sdd/features/{feature-name}/tasks.md` and extract for {task-id}: status, dependencies, files, description, acceptance criteria, implementation notes.
@@ -160,7 +160,7 @@ Completed:
   • T006: User service
 
 Next: T001 (no dependencies, ready)
-Command: /sdd-implement {feature-name} T001
+Command: /prompts:sdd-implement {feature-name} T001
 ```
 
 ## Feature Completion (Automatic)

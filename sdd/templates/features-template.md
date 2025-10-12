@@ -21,7 +21,7 @@ Brief description of what this feature does (1-2 lines)
 
 **Recommended Starting Point:**
 1. Replace example-feature with your first real feature
-2. Run `/sdd-spec <feature-name>` to create specification
+2. Run `/prompts:sdd-spec <feature-name>` to create specification
 
 ---
 

@@ -8,7 +8,7 @@
 
 Requires AGENTS.md at project root defining tech stack, coding standards, testing requirements, and architecture.
 
-If missing, run /sdd-init first.
+If missing, run `/prompts:sdd-init` first.
 
 ## Validation
 
@@ -65,7 +65,7 @@ Suggest next step:
 ```
 Feature spec created: sdd/features/{feature-name}/spec.md
 
-Next: /sdd-tasks {feature-name}
+Next: /prompts:sdd-tasks {feature-name}
 ```
 
 ## Guidelines
