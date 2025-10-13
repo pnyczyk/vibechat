@@ -105,15 +105,26 @@ function telemetryCalledWith<E extends TelemetryEventName>(
   event: E,
   matcher: Partial<TelemetryEvents[E]>,
 ) {
-  expect(mockedTelemetry).toHaveBeenCalledWith(
-    event,
-    expect.objectContaining(matcher),
+  const matchingCall = mockedTelemetry.mock.calls.find(
+    ([name, payload]) =>
+      name === event &&
+      expect
+        .objectContaining(matcher)
+        .asymmetricMatch(payload as TelemetryEvents[E]),
   );
+
+  expect(matchingCall).toBeDefined();
 }
 
 describe("ChatClient telemetry", () => {
   it("emits events for successful connect flow", async () => {
     renderClient();
+
+    await waitFor(() =>
+      telemetryCalledWith("session_entry_started", {
+        startedAt: expect.any(String),
+      }),
+    );
 
     const connectButton = screen.getByRole("button", { name: /start voice session/i });
     fireEvent.click(connectButton);
@@ -124,7 +135,15 @@ describe("ChatClient telemetry", () => {
     telemetryCalledWith("session_connect_success", {
       transport: "mock",
       durationMs: expect.any(Number),
+      entryLatencyMs: expect.any(Number),
     });
+
+    await waitFor(() =>
+      telemetryCalledWith("voice_activity_transition", {
+        state: "active",
+        hasMetrics: true,
+      }),
+    );
   });
 
   it("emits failure telemetry when connect fails", async () => {
@@ -158,6 +177,12 @@ describe("ChatClient telemetry", () => {
   it("logs mute and transcript interactions", async () => {
     renderClient();
 
+    await waitFor(() =>
+      telemetryCalledWith("session_entry_started", {
+        startedAt: expect.any(String),
+      }),
+    );
+
     const connectButton = screen.getByRole("button", { name: /start voice session/i });
     fireEvent.click(connectButton);
     await waitFor(() => expect(activeSession.connect).toHaveBeenCalledTimes(1));
@@ -182,10 +207,32 @@ describe("ChatClient telemetry", () => {
     const closeButton = await screen.findByRole("button", { name: /close transcript/i });
     fireEvent.click(closeButton);
     telemetryCalledWith("transcript_closed", {});
+
+    const themeToggleDark = screen.getByRole("button", { name: /switch to dark mode/i });
+    fireEvent.click(themeToggleDark);
+    await waitFor(() =>
+      telemetryCalledWith("session_theme_selected", {
+        mode: "dark",
+        source: "toggle",
+      }),
+    );
+
+    const themeToggleLight = screen.getByRole("button", { name: /switch to light mode/i });
+    fireEvent.click(themeToggleLight);
+    telemetryCalledWith("session_theme_selected", {
+      mode: "light",
+      source: "toggle",
+    });
   });
 
   it("logs disconnect telemetry", async () => {
     renderClient();
+
+    await waitFor(() =>
+      telemetryCalledWith("session_entry_started", {
+        startedAt: expect.any(String),
+      }),
+    );
 
     const connectButton = screen.getByRole("button", { name: /start voice session/i });
     fireEvent.click(connectButton);
@@ -195,5 +242,12 @@ describe("ChatClient telemetry", () => {
     fireEvent.click(disconnectButton);
 
     telemetryCalledWith("session_disconnect", { reason: "user" });
+
+    await waitFor(() =>
+      telemetryCalledWith("voice_activity_transition", {
+        state: "waiting",
+        hasMetrics: false,
+      }),
+    );
   });
 });
