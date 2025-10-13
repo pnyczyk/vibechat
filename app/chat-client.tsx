@@ -325,7 +325,6 @@ export function ChatClient() {
     let cancelled = false;
     let analyser: AnalyserNode | null = null;
     let source: MediaStreamAudioSourceNode | null = null;
-    let lastLogTime = 0;
 
     const cleanupAnalyser = () => {
       if (rafId !== null) {
@@ -356,18 +355,6 @@ export function ChatClient() {
           : level;
         const active = smoothed > 0.03;
 
-        const now = Date.now();
-        if (now - lastLogTime >= 1000) {
-          console.log('[HAL Audio]', {
-            raw: rawLevel.toFixed(4),
-            clamped: level.toFixed(4),
-            smoothed: smoothed.toFixed(4),
-            active,
-            threshold: 0.03,
-          });
-          lastLogTime = now;
-        }
-
         if (
           previous.hasMetrics &&
           Math.abs(previous.level - smoothed) < 0.002 &&
@@ -386,23 +373,16 @@ export function ChatClient() {
 
     const startAnalyser = async () => {
       if (!AudioContextCtor || !audioElement) {
-        console.log('[HAL Audio] No AudioContext or audioElement');
         return;
       }
 
       const stream = audioElement.srcObject as MediaStream | null;
       if (!stream || stream.getAudioTracks().length === 0) {
-        console.log('[HAL Audio] Waiting for audio stream...');
         if (!cancelled) {
           pollTimeout = window.setTimeout(startAnalyser, 200);
         }
         return;
       }
-
-      console.log('[HAL Audio] Starting analyser with stream', {
-        tracks: stream.getAudioTracks().length,
-        streamId: stream.id,
-      });
 
       let context = audioContextRef.current;
       if (!context) {
@@ -414,16 +394,12 @@ export function ChatClient() {
         await context.resume().catch(() => undefined);
       }
 
-      console.log('[HAL Audio] AudioContext state:', context.state);
-
       source = context.createMediaStreamSource(stream);
 
       analyser = context.createAnalyser();
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.4;
       source.connect(analyser);
-
-      console.log('[HAL Audio] Analyser connected, starting sampling');
 
       const bufferLength = analyser.fftSize;
       const dataArray = new Float32Array(bufferLength);
@@ -453,14 +429,11 @@ export function ChatClient() {
       startAnalyser();
     }
 
-    console.log('[HAL Audio] Setting up fallback interval');
-
     fallbackInterval = window.setInterval(() => {
       const getter = voiceSession.getLatestAudioLevel;
       const latest = typeof getter === "function" ? getter.call(voiceSession) : undefined;
 
       if (typeof latest === "number" && Number.isFinite(latest)) {
-        console.log('[HAL Audio] Fallback level from session:', latest.toFixed(4));
         noLevelCount = 0;
         updateFromLevel(latest);
         return;
@@ -468,7 +441,6 @@ export function ChatClient() {
 
       noLevelCount += 1;
       if (noLevelCount > 6) {
-        console.log('[HAL Audio] No fallback levels, resetting to 0');
         updateFromLevel(0);
       }
     }, 120);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, type CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
 import styles from "./controls.module.css";
 
 export type HalIndicatorProps = {
@@ -37,31 +37,12 @@ export function calculateHalGlow(
 }
 
 export function HalIndicator({ level, active, hasMetrics }: HalIndicatorProps) {
-  const lastLogTimeRef = useRef(0);
-
   // Scale level so 0.15 = 1.0 for calculation
   const scaledLevel = Math.min(level / 0.15, 1.0);
 
   const { intensity, state } = useMemo(
-    () => {
-      const result = calculateHalGlow(scaledLevel, hasMetrics, active);
-
-      const now = Date.now();
-      if (now - lastLogTimeRef.current >= 1000) {
-        console.log('[HAL Indicator]', {
-          rawLevel: level.toFixed(4),
-          scaledLevel: scaledLevel.toFixed(4),
-          active,
-          hasMetrics,
-          intensity: result.intensity,
-          state: result.state,
-        });
-        lastLogTimeRef.current = now;
-      }
-
-      return result;
-    },
-    [scaledLevel, hasMetrics, active, level],
+    () => calculateHalGlow(scaledLevel, hasMetrics, active),
+    [scaledLevel, hasMetrics, active],
   );
 
   const label = active

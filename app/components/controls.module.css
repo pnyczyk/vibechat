@@ -60,32 +60,41 @@
   border-radius: inherit;
   background: radial-gradient(
       circle at 35% 30%,
-      rgba(255, 255, 255, 0.65),
+      rgba(255, 255, 255, calc(0.65 * var(--hal-intensity))),
       rgba(255, 255, 255, 0) 25%
     ),
-    radial-gradient(circle, rgba(248, 113, 113, 0.8), rgba(136, 19, 55, 0.9) 55%, rgba(17, 24, 39, 0.9));
+    radial-gradient(
+      circle,
+      rgba(248, 113, 113, calc(0.3 + 0.5 * var(--hal-intensity))),
+      rgba(136, 19, 55, calc(0.2 + 0.7 * var(--hal-intensity))) 55%,
+      rgba(17, 24, 39, 0.95)
+    );
   box-shadow:
-    0 0 calc(18px * var(--hal-intensity)) rgba(252, 165, 165, 0.7),
-    inset 0 0 calc(12px * var(--hal-intensity)) rgba(255, 255, 255, 0.3),
-    inset 0 0 2px rgba(15, 23, 42, 0.9);
+    0 0 calc(18px * var(--hal-intensity)) rgba(252, 165, 165, calc(0.7 * var(--hal-intensity))),
+    inset 0 0 calc(12px * var(--hal-intensity)) rgba(255, 255, 255, calc(0.3 * var(--hal-intensity))),
+    inset 0 0 2px rgba(15, 23, 42, 0.95);
   display: grid;
   place-items: center;
-  transition: box-shadow 140ms ease;
+  transition: box-shadow 140ms ease, background 140ms ease;
 }
 
 .halCore {
   width: clamp(0.55rem, 1.1vw, 0.85rem);
   height: clamp(0.55rem, 1.1vw, 0.85rem);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(254, 202, 202, 0.95), rgba(239, 68, 68, 0.7));
-  box-shadow: 0 0 calc(16px * var(--hal-intensity)) rgba(248, 113, 113, 0.9);
-  transition: box-shadow 140ms ease, transform 140ms ease;
+  background: radial-gradient(
+    circle,
+    rgba(254, 202, 202, calc(0.2 + 0.75 * var(--hal-intensity))),
+    rgba(239, 68, 68, calc(0.1 + 0.6 * var(--hal-intensity)))
+  );
+  box-shadow: 0 0 calc(16px * var(--hal-intensity)) rgba(248, 113, 113, calc(0.9 * var(--hal-intensity)));
+  transition: box-shadow 140ms ease, transform 140ms ease, background 140ms ease;
   transform: scale(calc(0.9 + var(--hal-intensity) * 0.15));
 }
 
 .halIndicator[data-state="waiting"] .halCore {
-  box-shadow: 0 0 6px rgba(148, 163, 184, 0.4);
-  background: radial-gradient(circle, rgba(226, 232, 240, 0.6), rgba(100, 116, 139, 0.7));
+  box-shadow: 0 0 3px rgba(30, 30, 35, 0.5);
+  background: radial-gradient(circle, rgba(50, 50, 55, 0.4), rgba(30, 30, 35, 0.6));
 }
 
 .halRing {
@@ -107,8 +116,9 @@
   height: clamp(0.35rem, 0.7vw, 0.55rem);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 70%);
-  opacity: calc(0.4 + var(--hal-intensity) * 0.2);
+  opacity: calc(0.1 + var(--hal-intensity) * 0.5);
   pointer-events: none;
+  transition: opacity 140ms ease;
 }
 
 .srOnly {
