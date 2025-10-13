@@ -3,7 +3,7 @@ import { HalIndicator, calculateHalGlow } from "../../app/components/HalIndicato
 
 describe("HalIndicator", () => {
   it("marks active state when speaking", () => {
-    const { getByTestId } = render(<HalIndicator level={0.8} active hasMetrics />);
+    const { getByTestId } = render(<HalIndicator level={0.12} active hasMetrics />);
 
     const indicator = getByTestId("voice-activity-indicator");
     expect(indicator).toHaveAttribute("data-state", "active");

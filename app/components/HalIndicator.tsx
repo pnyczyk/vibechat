@@ -39,14 +39,18 @@ export function calculateHalGlow(
 export function HalIndicator({ level, active, hasMetrics }: HalIndicatorProps) {
   const lastLogTimeRef = useRef(0);
 
+  // Scale level so 0.15 = 1.0 for calculation
+  const scaledLevel = Math.min(level / 0.15, 1.0);
+
   const { intensity, state } = useMemo(
     () => {
-      const result = calculateHalGlow(level, hasMetrics, active);
+      const result = calculateHalGlow(scaledLevel, hasMetrics, active);
 
       const now = Date.now();
       if (now - lastLogTimeRef.current >= 1000) {
         console.log('[HAL Indicator]', {
-          level: level.toFixed(4),
+          rawLevel: level.toFixed(4),
+          scaledLevel: scaledLevel.toFixed(4),
           active,
           hasMetrics,
           intensity: result.intensity,
@@ -57,7 +61,7 @@ export function HalIndicator({ level, active, hasMetrics }: HalIndicatorProps) {
 
       return result;
     },
-    [level, hasMetrics, active],
+    [scaledLevel, hasMetrics, active, level],
   );
 
   const label = active
@@ -77,19 +81,10 @@ export function HalIndicator({ level, active, hasMetrics }: HalIndicatorProps) {
       aria-label={label}
       data-testid="voice-activity-indicator"
     >
-      <div className={styles.debugBar}>
-        <div className={styles.debugBarLabel}>
-          Level: {level.toFixed(3)} (max: 0.2)
-        </div>
-        <div className={styles.debugBarTrack}>
-          <div
-            className={styles.debugBarFill}
-            style={{ width: `${Math.min((level / 0.2) * 100, 100)}%` } as CSSProperties}
-          />
-        </div>
-        <div className={styles.debugBarLabel}>
-          Intensity: {intensity.toFixed(3)} | {state}
-        </div>
+      <div className={styles.halLens} aria-hidden="true">
+        <span className={styles.halRing} />
+        <span className={styles.halCore} />
+        <span className={styles.halGlint} />
       </div>
       <span className={styles.srOnly}>{label}</span>
     </div>
