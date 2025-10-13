@@ -16,7 +16,6 @@ import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
 import Alert from "@mui/material/Alert";
@@ -139,16 +138,15 @@ export function TranscriptDrawer({
             Transcript
           </Typography>
           <Stack direction="row" sx={{ marginLeft: "auto" }}>
-            <Tooltip title="Close transcript">
-              <IconButton
-                aria-label="Close transcript"
-                edge="end"
-                onClick={onClose}
-                size="small"
-              >
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <IconButton
+              aria-label="Close transcript"
+              edge="end"
+              onClick={onClose}
+              size="small"
+              title="Close transcript"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
           </Stack>
         </Stack>
 
@@ -228,20 +226,17 @@ export function TranscriptDrawer({
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <Tooltip title="Send message">
-                    <span>
-                      <IconButton
-                        type="submit"
-                        aria-label="Send message"
-                        color="primary"
-                        disabled={inputDisabled || isSubmitting}
-                        edge="end"
-                        size="small"
-                      >
-                        <SendIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+                  <IconButton
+                    type="submit"
+                    aria-label="Send message"
+                    color="primary"
+                    disabled={inputDisabled || isSubmitting}
+                    edge="end"
+                    size="small"
+                    title="Send message"
+                  >
+                    <SendIcon fontSize="small" />
+                  </IconButton>
                 </InputAdornment>
               ),
             }}
