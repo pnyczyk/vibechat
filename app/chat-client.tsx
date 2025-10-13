@@ -5,16 +5,13 @@ import Typography from "@mui/material/Typography";
 import { RealtimeAgent, RealtimeSession } from "@openai/agents/realtime";
 import styles from "./chat-client.module.css";
 
-import {
-  SessionControls,
-  SessionFeedback,
-  ConnectionStatus,
-} from "./components/SessionControls";
+import { SessionControls, SessionFeedback, ConnectionStatus } from "./components/SessionControls";
 import { EntryOverlay } from "./components/EntryOverlay";
 import { TranscriptDrawer } from "./components/TranscriptDrawer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
 import { logTelemetry, type TelemetryTransport } from "./lib/analytics";
 import { createRealtimeSession } from "./lib/realtime-session-factory";
+import { useThemeController } from "./providers";
 
 type VoiceActivityState = {
   level: number;
@@ -40,6 +37,7 @@ const clampLevel = (value: number) => {
 };
 
 export function ChatClient() {
+  const { mode: themeMode, toggle: toggleTheme } = useThemeController();
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<SessionFeedback | null>(null);
@@ -460,6 +458,7 @@ export function ChatClient() {
   return (
     <div
       className={styles.layout}
+      data-testid="chat-layout"
       data-layout={isCompactLayout ? "compact" : "wide"}
       data-dimmed={isDimmed ? "true" : "false"}
     >
@@ -518,6 +517,8 @@ export function ChatClient() {
             voiceLevel={voiceActivity.level}
             transcriptOpen={isTranscriptOpen}
             onToggleTranscript={handleToggleTranscript}
+            themeMode={themeMode}
+            onToggleTheme={toggleTheme}
           />
         </div>
       </aside>

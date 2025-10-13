@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light;
+  color-scheme: var(--vc-color-scheme, light);
 }
 
 * {
@@ -19,7 +19,7 @@ body.vc-body {
   min-height: 100vh;
   min-width: 100vw;
   width: 100%;
-  background-color: var(--mui-palette-background-default, #ffffff);
+  background-color: var(--vc-background, #ffffff);
   overflow: hidden;
 }
 
