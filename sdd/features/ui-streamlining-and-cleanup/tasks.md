@@ -97,7 +97,7 @@ Create a minimal blue circle indicator driven by realtime voice activity metrics
 ---
 
 ## Task T005: Add Theme Toggle With Persistence
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002
 **Files:**
 - `app/theme.ts`
