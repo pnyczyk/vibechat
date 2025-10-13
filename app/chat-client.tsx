@@ -325,6 +325,7 @@ export function ChatClient() {
     let cancelled = false;
     let analyser: AnalyserNode | null = null;
     let source: MediaStreamAudioSourceNode | null = null;
+    let lastLogTime = 0;
 
     const cleanupAnalyser = () => {
       if (rafId !== null) {
@@ -355,13 +356,17 @@ export function ChatClient() {
           : level;
         const active = smoothed > 0.03;
 
-        console.log('[HAL Audio]', {
-          raw: rawLevel.toFixed(4),
-          clamped: level.toFixed(4),
-          smoothed: smoothed.toFixed(4),
-          active,
-          threshold: 0.03,
-        });
+        const now = Date.now();
+        if (now - lastLogTime >= 1000) {
+          console.log('[HAL Audio]', {
+            raw: rawLevel.toFixed(4),
+            clamped: level.toFixed(4),
+            smoothed: smoothed.toFixed(4),
+            active,
+            threshold: 0.03,
+          });
+          lastLogTime = now;
+        }
 
         if (
           previous.hasMetrics &&
