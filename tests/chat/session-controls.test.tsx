@@ -18,6 +18,7 @@ type RenderProps = {
   onToggleTranscript?: () => void;
   themeMode?: "light" | "dark";
   onToggleTheme?: () => void;
+  voiceLevel?: number;
 };
 
 function renderSessionControls({
@@ -32,6 +33,7 @@ function renderSessionControls({
   onToggleTranscript = jest.fn(),
   themeMode = "light",
   onToggleTheme,
+  voiceLevel = 0,
 }: RenderProps = {}) {
   const theme = createTheme();
   const result = render(
@@ -46,6 +48,7 @@ function renderSessionControls({
         onFeedbackClose={onFeedbackClose}
         voiceActive={false}
         voiceHasMetrics={false}
+        voiceLevel={voiceLevel}
         transcriptOpen={transcriptOpen}
         onToggleTranscript={onToggleTranscript}
         themeMode={themeMode}

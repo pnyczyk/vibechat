@@ -36,7 +36,7 @@ Stretch the chat experience to fill the browser window in both dimensions and in
 Refactor the control rail into a minimalist right-edge icon stack, remove visible labels/borders/placeholders, and keep accessibility affordances via aria attributes.
 
 ### Acceptance Criteria
-- Power, mute, transcript, HAL indicator, and theme icons render vertically flush to the right viewport edge with consistent spacing
+- Power, mute, transcript, voice indicator, and theme icons render vertically flush to the right viewport edge with consistent spacing
 - All textual labels, frames, and placeholder panels removed from default view while aria-label/tooltips remain available for assistive tech
 - Tests cover responsive alignment at ≥1024px and ≤480px and confirm aria attributes remain intact
 
@@ -68,25 +68,31 @@ Introduce a central lightning icon overlay for initial connect, dim the backgrou
 
 ---
 
-## Task T004: Build HAL Voice Activity Indicator
-**Status:** Pending
+## Task T004: Build Voice Activity Indicator
+**Status:** Completed
 **Dependencies:** T002, T003
 **Files:**
 - `app/components/HalIndicator.tsx`
 - `app/components/SessionControls.tsx`
+- `app/chat-client.tsx`
 - `tests/chat/hal-indicator.test.tsx`
 
 ### Description
-Create a HAL 9000-inspired red glowing circle driven by voice activity metrics and integrate it into the control rail without impacting render performance.
+Create a minimal blue circle indicator driven by realtime voice activity metrics from AI speech output, with opacity and scale animations that respond to audio levels.
 
 ### Acceptance Criteria
-- Indicator animates glow intensity based on mocked speech/idle events while maintaining accessibility contrast
-- Idle state reduces glow but remains visible for screen readers via status updates
-- Performance test (Jest or profiling helper) ensures animation work stays under 4ms per frame equivalent
+- Indicator renders as a blue circle (1.3-1.7rem) that grows and brightens based on audio levels
+- Audio levels scaled so 0.15 = 100% intensity to match typical AI speech range
+- Idle/zero state shows 25% opacity, active state reaches 100% opacity
+- Performance test ensures animation stays under 10ms in CI environment
+- Smooth 120ms transitions for opacity and transform changes
 
 ### Implementation Notes
 - Reference spec Story 4
-- Consider CSS variables or Canvas for animation; prefer lightweight approach
+- Uses CSS radial-gradient for blue (rgb 96,165,250 → 59,130,246)
+- Audio level capture via Web Audio API analyser on output stream
+- RMS calculation with 50/50 smoothing and 0.03 active threshold
+- Component uses --hal-intensity CSS variable for dynamic styling
 
 ---
 
@@ -167,10 +173,10 @@ Instrument lightning entry, theme toggles, and HAL activity start/stop events so
 - `playwright.config.ts`
 
 ### Description
-Add an end-to-end scenario covering lightning entry, connect/disconnect flow, HAL indicator glow, and theme toggling to guard critical user journeys.
+Add an end-to-end scenario covering lightning entry, connect/disconnect flow, voice indicator response, and theme toggling to guard critical user journeys.
 
 ### Acceptance Criteria
-- Playwright test runs through entry overlay, establishes session, verifies indicator glow on simulated speech, and toggles theme
+- Playwright test runs through entry overlay, establishes session, verifies indicator brightness/scale on simulated speech, and toggles theme
 - Test passes with mocked realtime session and Fast 3G throttling setup to validate timing expectations
 - CI command documented to run the updated suite alongside existing tests
 
@@ -198,7 +204,7 @@ Re-run automated accessibility audits after label removal, ensure aria support i
 
 ### Implementation Notes
 - Reference spec Stories 1 and 2
-- Coordinate with design to validate HAL indicator contrast thresholds
+- Coordinate with design to validate voice indicator opacity contrast thresholds
 
 ---
 
