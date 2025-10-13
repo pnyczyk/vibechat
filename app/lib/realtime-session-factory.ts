@@ -4,7 +4,7 @@ import {
   RealtimeSession,
 } from "@openai/agents/realtime";
 
-import { MockRealtimeSession } from "./mock-realtime-session";
+import { MockRealtimeSession, type MockRealtimeSessionType } from "./mock-realtime-session";
 
 const useMockRuntime = process.env.NEXT_PUBLIC_USE_REALTIMEMOCK === "1";
 
@@ -18,8 +18,17 @@ export function createRealtimeSession(
   audioElement: HTMLAudioElement | null,
 ): CreateSessionResult {
   if (useMockRuntime) {
+    const mockSession = new MockRealtimeSession(agent);
+
+    if (typeof window !== "undefined") {
+      const globalWindow = window as typeof window & {
+        __vibeMockSession?: MockRealtimeSessionType;
+      };
+      globalWindow.__vibeMockSession = mockSession;
+    }
+
     return {
-      session: new MockRealtimeSession(agent) as unknown as RealtimeSession,
+      session: mockSession as unknown as RealtimeSession,
       requiresToken: false,
     };
   }

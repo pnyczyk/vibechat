@@ -62,7 +62,8 @@ Store the prompts under `~/.codex/prompts/` so `/prompts:sdd-*` commands can ref
 - Command: `npm test` (configure Jest + coverage)
 - Watch Mode: `npm test -- --watch`
 - CI Command: `npm test -- --ci` (add Playwright run once configured)
-- E2E: `npm run test:e2e` (spins Next dev server with mocked realtime session)
+- E2E: `npm run test:e2e` (spins Next dev server with mocked realtime session and runs
+  ui-overhaul plus ui-streamlining-and-cleanup journeys)
 
 ### Telemetry
 - Toggle runtime telemetry with `NEXT_PUBLIC_ENABLE_TELEMETRY=1`; default is disabled in dev, test, and CI.

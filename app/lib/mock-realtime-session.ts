@@ -120,6 +120,15 @@ export class MockRealtimeSession {
     return this.level;
   }
 
+  setAudioLevel(level: number): void {
+    if (!Number.isFinite(level)) {
+      return;
+    }
+
+    const clamped = Math.max(0, Math.min(1, level));
+    this.level = clamped;
+  }
+
   sendMessage(message: MockRealtimeUserInput): void {
     if (this.closed) {
       throw new Error("Session closed");

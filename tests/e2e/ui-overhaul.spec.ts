@@ -1,25 +1,16 @@
-import { test, expect } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./fixtures/session";
 
 test.describe("UI Overhaul critical path", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.route("**/api/realtime-token", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ value: "test-api-key" }),
-      });
-    });
-  });
-
   test("connects, toggles controls, and uses transcript drawer", async ({ page }) => {
     await page.goto("/");
 
-    const connectButton = page.getByRole("button", {
-      name: /connect to session/i,
+    const entryButton = page.getByRole("button", {
+      name: /start voice session/i,
     });
-    await expect(connectButton).toBeVisible();
+    await expect(entryButton).toBeVisible();
 
-    await connectButton.click();
+    await entryButton.click();
 
     await expect(page.getByText(/status: connected/i)).toBeVisible();
     await expect(
