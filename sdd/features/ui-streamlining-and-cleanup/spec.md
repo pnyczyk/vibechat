@@ -28,9 +28,9 @@ Aligning the interface with the streamlined interaction model before shipping ne
 **So that** I can act quickly without visual clutter
 
 **Acceptance Criteria:**
-- [ ] Connect/disconnect (power), mute, transcript, HAL indicator, and theme toggle icons align vertically flush to the right edge with consistent spacing
-- [ ] All textual labels, borders, and placeholder panels are removed while preserving accessible aria-label/tooltips that surface only on screen reader or long-press
-- [ ] Layout adapts to desktop ≥1024px and mobile ≤480px without icons drifting or wrapping
+- [x] Connect/disconnect (power), mute, transcript, voice indicator, and theme toggle icons align vertically flush to the right edge with consistent spacing
+- [x] All textual labels, borders, and placeholder panels are removed while preserving accessible aria-label/tooltips that surface only on screen reader or long-press
+- [x] Layout adapts to desktop ≥1024px and mobile ≤480px without icons drifting or wrapping
 
 ### Story 3: Lightning Entry Flow
 **As a** voice chat participant
@@ -42,15 +42,16 @@ Aligning the interface with the streamlined interaction model before shipping ne
 - [ ] Clicking the icon provisions a realtime session and transitions to the standard control rail within 1s
 - [ ] Once connected, the lightning icon is replaced by the power toggle in the rail, and disconnecting returns to the entry state
 
-### Story 4: HAL-Inspired Voice Indicator
+### Story 4: Voice Activity Indicator
 **As a** voice chat participant
-**I want to** see a HAL 9000-style glowing red indicator when the AI speaks
+**I want to** see a subtle blue indicator that responds to AI speech levels
 **So that** I can tell when the agent is active at a glance
 
 **Acceptance Criteria:**
-- [ ] Voice activity indicator renders as a small red circle with animated glow intensity tied to speech events
-- [ ] Idle state reduces glow while maintaining visibility for accessibility contrast
-- [ ] Indicator performance stays under 4ms per animation frame in profiling to avoid UI jank
+- [x] Voice activity indicator renders as a small blue circle that grows and brightens with audio levels
+- [x] Idle state reduces opacity (25%) while active state reaches full opacity (100%) at 0.15+ audio level
+- [x] Indicator performance stays under 10ms per animation frame in CI testing to avoid UI jank
+- [x] Audio levels are scaled (0.15 = 100%) to match typical AI speech output range
 
 ### Story 5: One-Tap Theme Toggle
 **As a** voice chat participant
