@@ -140,11 +140,23 @@ describe("SessionControls", () => {
     expect(onToggleTranscript).toHaveBeenCalledTimes(1);
   });
 
-  it("renders theme toggle placeholder disabled by default", () => {
+  it("disables theme toggle when handler missing", () => {
     renderSessionControls();
 
     const themeButton = screen.getByRole("button", { name: /switch to dark mode/i });
     expect(themeButton).toBeDisabled();
+  });
+
+  it("enables theme toggle when handler provided", () => {
+    const onToggleTheme = jest.fn();
+    renderSessionControls({ onToggleTheme });
+
+    const themeButton = screen.getByRole("button", { name: /switch to dark mode/i });
+    expect(themeButton).toBeEnabled();
+
+    fireEvent.click(themeButton);
+
+    expect(onToggleTheme).toHaveBeenCalledTimes(1);
   });
 
   it("exposes edge-aligned metadata for layout styling", () => {
