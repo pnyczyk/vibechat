@@ -165,7 +165,7 @@ Instrument lightning entry, theme toggles, and HAL activity start/stop events so
 ---
 
 ## Task T008: Refresh Playwright E2E Flow
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T003, T004, T005
 **Files:**
 - `tests/e2e/ui-streamlining-and-cleanup.spec.ts`
