@@ -61,12 +61,8 @@ export function HalIndicator({ level, active, hasMetrics }: HalIndicatorProps) {
       aria-live="polite"
       aria-label={label}
       data-testid="voice-activity-indicator"
+      aria-hidden="true"
     >
-      <div className={styles.halLens} aria-hidden="true">
-        <span className={styles.halRing} />
-        <span className={styles.halCore} />
-        <span className={styles.halGlint} />
-      </div>
       <span className={styles.srOnly}>{label}</span>
     </div>
   );
