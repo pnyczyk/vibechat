@@ -26,8 +26,8 @@ export function calculateHalGlow(
   }
 
   const clampedLevel = clamp(level);
-  const idleIntensity = clamp(clampedLevel * 0.55 + 0.22, 0.22, 0.6);
-  const activeIntensity = clamp(clampedLevel * 0.65 + 0.45, 0.5, 1);
+  const idleIntensity = clamp(clampedLevel * 0.4 + 0.15, 0.15, 0.45);
+  const activeIntensity = clamp(clampedLevel * 0.8 + 0.3, 0.3, 1);
   const intensity = active ? activeIntensity : idleIntensity;
 
   return {

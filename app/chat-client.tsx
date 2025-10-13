@@ -351,13 +351,13 @@ export function ChatClient() {
       setVoiceActivity((previous) => {
         const level = clampLevel(rawLevel);
         const smoothed = previous.hasMetrics
-          ? previous.level * 0.7 + level * 0.3
+          ? previous.level * 0.5 + level * 0.5
           : level;
-        const active = smoothed > 0.06;
+        const active = smoothed > 0.03;
 
         if (
           previous.hasMetrics &&
-          Math.abs(previous.level - smoothed) < 0.005 &&
+          Math.abs(previous.level - smoothed) < 0.002 &&
           previous.active === active
         ) {
           return previous;

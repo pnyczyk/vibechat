@@ -7,7 +7,7 @@ describe("HalIndicator", () => {
 
     const indicator = getByTestId("voice-activity-indicator");
     expect(indicator).toHaveAttribute("data-state", "active");
-    expect(indicator.style.getPropertyValue("--hal-intensity")).toBe("0.97");
+    expect(indicator.style.getPropertyValue("--hal-intensity")).toBe("0.94");
   });
 
   it("falls back to waiting state when metrics unavailable", () => {
