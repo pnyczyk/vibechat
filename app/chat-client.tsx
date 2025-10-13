@@ -49,7 +49,11 @@ export function ChatClient() {
   );
   const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [isTranscriptReady, setIsTranscriptReady] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const entryStartRef = useRef<number | null>(null);
+  const entryTimestampRef = useRef<string | null>(null);
+  const voiceStateRef = useRef<"waiting" | "idle" | "active">("waiting");
   const audioElement = useState(() => {
     if (typeof window === "undefined") {
       return null;
@@ -104,6 +108,12 @@ export function ChatClient() {
   }, [transcriptStore]);
 
   useEffect(() => {
+    if ((isTranscriptOpen || transcriptEntries.length > 0) && !isTranscriptReady) {
+      setIsTranscriptReady(true);
+    }
+  }, [isTranscriptOpen, isTranscriptReady, transcriptEntries.length]);
+
+  useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return;
     }
@@ -130,6 +140,36 @@ export function ChatClient() {
       mediaQuery.removeListener(legacyListener);
     };
   }, []);
+
+  useEffect(() => {
+    const overlayVisible = status === "idle" || status === "error";
+    if (overlayVisible && entryStartRef.current === null) {
+      const highResNow =
+        typeof performance !== "undefined" && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
+      entryStartRef.current = highResNow;
+      const startedAt = new Date().toISOString();
+      entryTimestampRef.current = startedAt;
+      logTelemetry("session_entry_started", { startedAt });
+    }
+  }, [status]);
+
+  useEffect(() => {
+    const state = voiceActivity.hasMetrics
+      ? voiceActivity.active
+        ? "active"
+        : "idle"
+      : "waiting";
+
+    if (voiceStateRef.current !== state) {
+      voiceStateRef.current = state;
+      logTelemetry("voice_activity_transition", {
+        state,
+        hasMetrics: voiceActivity.hasMetrics,
+      });
+    }
+  }, [voiceActivity]);
 
   const agent = useMemo(() => {
     return new RealtimeAgent({
@@ -200,13 +240,24 @@ export function ChatClient() {
       setFeedback({ message: "Connected to session", severity: "success" });
       setMuted(Boolean(newSession.muted));
       setVoiceActivity(defaultVoiceActivityState);
+      voiceStateRef.current = "waiting";
+
+      const entryStart = entryStartRef.current;
+      const nowHighRes =
+        typeof performance !== "undefined" && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
+      const entryLatencyMs =
+        typeof entryStart === "number" ? Math.max(0, nowHighRes - entryStart) : null;
+      entryStartRef.current = null;
+      entryTimestampRef.current = null;
 
       const endTime =
         typeof performance !== "undefined" && typeof performance.now === "function"
           ? performance.now()
           : Date.now();
       const durationMs = Math.max(0, endTime - startTime);
-      logTelemetry("session_connect_success", { durationMs, transport });
+      logTelemetry("session_connect_success", { durationMs, transport, entryLatencyMs });
     } catch (err) {
       console.error("Failed to connect realtime session", err);
       newSession?.close();
@@ -215,9 +266,12 @@ export function ChatClient() {
       setError(message);
       setFeedback({ message, severity: "error" });
       setVoiceActivity(defaultVoiceActivityState);
+      voiceStateRef.current = "waiting";
+      entryStartRef.current = null;
+      entryTimestampRef.current = null;
       logTelemetry("session_connect_failure", { message, transport });
     }
-  }, [agent, audioElement, logTelemetry, session, status]);
+  }, [agent, audioElement, session, status]);
 
   const handleDisconnect = useCallback(() => {
     session?.close();
@@ -228,8 +282,12 @@ export function ChatClient() {
     setFeedback({ message: "Disconnected from session", severity: "success" });
     setVoiceActivity(defaultVoiceActivityState);
     setIsTranscriptOpen(false);
+    voiceStateRef.current = "waiting";
+    entryStartRef.current = null;
+    entryTimestampRef.current = null;
+    logTelemetry("voice_activity_transition", { state: "waiting", hasMetrics: false });
     logTelemetry("session_disconnect", { reason: "user" });
-  }, [logTelemetry, session]);
+  }, [session]);
 
   const handleToggleMute = useCallback(() => {
     if (!session) {
@@ -274,6 +332,12 @@ export function ChatClient() {
       return false;
     });
   }, [logTelemetry]);
+
+  const handleToggleTheme = useCallback(() => {
+    const nextMode = themeMode === "dark" ? "light" : "dark";
+    logTelemetry("session_theme_selected", { mode: nextMode, source: "toggle" });
+    toggleTheme();
+  }, [themeMode, toggleTheme]);
 
   const handleSendTranscriptMessage = useCallback(
     async (text: string) => {
@@ -506,7 +570,6 @@ export function ChatClient() {
         <div className={styles.controlRailInner}>
           <SessionControls
             status={status}
-            onConnect={handleConnect}
             onDisconnect={handleDisconnect}
             muted={muted}
             onToggleMute={handleToggleMute}
@@ -518,17 +581,19 @@ export function ChatClient() {
             transcriptOpen={isTranscriptOpen}
             onToggleTranscript={handleToggleTranscript}
             themeMode={themeMode}
-            onToggleTheme={toggleTheme}
+            onToggleTheme={handleToggleTheme}
           />
         </div>
       </aside>
-      <TranscriptDrawer
-        open={isTranscriptOpen}
-        onClose={handleCloseTranscript}
-        entries={transcriptEntries}
-        onSendMessage={handleSendTranscriptMessage}
-        inputDisabled={status !== "connected"}
-      />
+      {(isTranscriptReady || isTranscriptOpen) && (
+        <TranscriptDrawer
+          open={isTranscriptOpen}
+          onClose={handleCloseTranscript}
+          entries={transcriptEntries}
+          onSendMessage={handleSendTranscriptMessage}
+          inputDisabled={status !== "connected"}
+        />
+      )}
     </div>
   );
 }

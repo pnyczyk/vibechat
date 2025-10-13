@@ -1,8 +1,14 @@
 export type TelemetryTransport = "mock" | "realtime";
 
+type ThemePreference = "light" | "dark";
+
 export type TelemetryEvents = {
   session_connect_attempt: { transport: TelemetryTransport };
-  session_connect_success: { durationMs: number; transport: TelemetryTransport };
+  session_connect_success: {
+    durationMs: number;
+    transport: TelemetryTransport;
+    entryLatencyMs?: number | null;
+  };
   session_connect_failure: { message: string; transport: TelemetryTransport };
   session_disconnect: { reason: "user" | "error" };
   session_mute_enabled: Record<string, never>;
@@ -10,6 +16,12 @@ export type TelemetryEvents = {
   transcript_opened: Record<string, never>;
   transcript_closed: Record<string, never>;
   transcript_message_sent: { length: number };
+  session_entry_started: { startedAt: string };
+  session_theme_selected: { mode: ThemePreference; source: "toggle" | "explicit" };
+  voice_activity_transition: {
+    state: "waiting" | "idle" | "active";
+    hasMetrics: boolean;
+  };
 };
 
 export type TelemetryEventName = keyof TelemetryEvents;

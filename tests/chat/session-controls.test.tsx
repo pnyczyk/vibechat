@@ -9,7 +9,6 @@ import {
 type RenderProps = {
   status?: ConnectionStatus;
   feedback?: SessionFeedback | null;
-  onConnect?: () => void;
   onDisconnect?: () => void;
   muted?: boolean;
   onToggleMute?: () => void;
@@ -24,7 +23,6 @@ type RenderProps = {
 function renderSessionControls({
   status = "idle",
   feedback = null,
-  onConnect = jest.fn(),
   onDisconnect = jest.fn(),
   muted = false,
   onToggleMute = jest.fn(),
@@ -40,7 +38,6 @@ function renderSessionControls({
     <ThemeProvider theme={theme}>
       <SessionControls
         status={status}
-        onConnect={onConnect}
         onDisconnect={onDisconnect}
         muted={muted}
         onToggleMute={onToggleMute}
