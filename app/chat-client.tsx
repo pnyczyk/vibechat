@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Typography from "@mui/material/Typography";
 import { RealtimeAgent, RealtimeSession } from "@openai/agents/realtime";
+import dynamic from "next/dynamic";
 import styles from "./chat-client.module.css";
 
 import { SessionControls, SessionFeedback, ConnectionStatus } from "./components/SessionControls";
 import { EntryOverlay } from "./components/EntryOverlay";
-import { TranscriptDrawer } from "./components/TranscriptDrawer";
+import type { TranscriptDrawerProps } from "./components/TranscriptDrawer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
 import { logTelemetry, type TelemetryTransport } from "./lib/analytics";
 import { createRealtimeSession } from "./lib/realtime-session-factory";
@@ -29,6 +30,12 @@ const defaultVoiceActivityState: VoiceActivityState = {
   hasMetrics: false,
 };
 
+const TranscriptDrawer = dynamic<TranscriptDrawerProps>(
+  () =>
+    import("./components/TranscriptDrawer").then((module) => module.TranscriptDrawer),
+  { ssr: false, loading: () => null },
+);
+
 const clampLevel = (value: number) => {
   if (!Number.isFinite(value)) {
     return 0;
@@ -49,6 +56,7 @@ export function ChatClient() {
   );
   const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [isTranscriptReady, setIsTranscriptReady] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
   const audioElement = useState(() => {
     if (typeof window === "undefined") {
@@ -102,6 +110,12 @@ export function ChatClient() {
       transcriptStore.dispose();
     };
   }, [transcriptStore]);
+
+  useEffect(() => {
+    if ((isTranscriptOpen || transcriptEntries.length > 0) && !isTranscriptReady) {
+      setIsTranscriptReady(true);
+    }
+  }, [isTranscriptOpen, isTranscriptReady, transcriptEntries.length]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -506,7 +520,6 @@ export function ChatClient() {
         <div className={styles.controlRailInner}>
           <SessionControls
             status={status}
-            onConnect={handleConnect}
             onDisconnect={handleDisconnect}
             muted={muted}
             onToggleMute={handleToggleMute}
@@ -522,13 +535,15 @@ export function ChatClient() {
           />
         </div>
       </aside>
-      <TranscriptDrawer
-        open={isTranscriptOpen}
-        onClose={handleCloseTranscript}
-        entries={transcriptEntries}
-        onSendMessage={handleSendTranscriptMessage}
-        inputDisabled={status !== "connected"}
-      />
+      {(isTranscriptReady || isTranscriptOpen) ? (
+        <TranscriptDrawer
+          open={isTranscriptOpen}
+          onClose={handleCloseTranscript}
+          entries={transcriptEntries}
+          onSendMessage={handleSendTranscriptMessage}
+          inputDisabled={status !== "connected"}
+        />
+      ) : null}
     </div>
   );
 }

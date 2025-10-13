@@ -23,13 +23,13 @@ export const useThemeController = () => {
 };
 
 export default function Providers({ children }: PropsWithChildren) {
-  const themeStoreRef = useRef<ThemeStore>();
+  const themeStoreRef = useRef<ThemeStore | null>(null);
 
   if (!themeStoreRef.current) {
     themeStoreRef.current = new ThemeStore();
   }
 
-  const themeStore = themeStoreRef.current;
+  const themeStore = themeStoreRef.current!;
   const [mode, setMode] = useState<ThemeMode>(() => themeStore.getMode());
 
   useEffect(() => {
