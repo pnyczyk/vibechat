@@ -11,11 +11,19 @@ This document tracks all planned features for vibechat.
 
 ## Features
 
-### [ ] ui-overhaul
+### [x] ui-overhaul
 Revamp chat interface for richer voice + text interactions
 - **Priority:** High
 - **Dependencies:** None
 - **Notes:** Focus on seamless transcript and voice controls
+
+---
+
+### [ ] ui-streamlining-and-cleanup
+Refine the full-viewport chat canvas with lightning entry, minimalist controls, and theme flexibility
+- **Priority:** High
+- **Dependencies:** ui-overhaul
+- **Notes:** Tasks T001–T007 landed; telemetry, E2E refresh, and regression sweep remain
 
 ---
 

@@ -120,7 +120,7 @@ Provide a light/dark mode switch on the control rail, ensure smooth Material UI 
 ---
 
 ## Task T006: Strip Legacy Assets And Measure Bundle Impact
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002, T004, T005
 **Files:**
 - `app/components/*`
@@ -143,7 +143,7 @@ Remove unused UI components, icons, and styles, update import paths, and documen
 ---
 
 ## Task T007: Update Telemetry And Analytics Hooks
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T003, T005
 **Files:**
 - `app/lib/analytics.ts`
