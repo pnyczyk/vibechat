@@ -79,12 +79,12 @@ export function HalIndicator({ level, active, hasMetrics }: HalIndicatorProps) {
     >
       <div className={styles.debugBar}>
         <div className={styles.debugBarLabel}>
-          Level: {level.toFixed(3)}
+          Level: {level.toFixed(3)} (max: 0.2)
         </div>
         <div className={styles.debugBarTrack}>
           <div
             className={styles.debugBarFill}
-            style={{ width: `${level * 100}%` } as CSSProperties}
+            style={{ width: `${Math.min((level / 0.2) * 100, 100)}%` } as CSSProperties}
           />
         </div>
         <div className={styles.debugBarLabel}>
