@@ -38,7 +38,17 @@ export function calculateHalGlow(
 
 export function HalIndicator({ level, active, hasMetrics }: HalIndicatorProps) {
   const { intensity, state } = useMemo(
-    () => calculateHalGlow(level, hasMetrics, active),
+    () => {
+      const result = calculateHalGlow(level, hasMetrics, active);
+      console.log('[HAL Indicator]', {
+        level: level.toFixed(4),
+        active,
+        hasMetrics,
+        intensity: result.intensity,
+        state: result.state,
+      });
+      return result;
+    },
     [level, hasMetrics, active],
   );
 

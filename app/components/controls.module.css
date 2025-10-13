@@ -53,18 +53,6 @@
   transform: scale(calc(0.94 + var(--hal-intensity) * 0.08));
 }
 
-.halIndicator[data-state="waiting"] {
-  --hal-intensity: 0.08;
-}
-
-.halIndicator[data-state="idle"] {
-  --hal-intensity: 0.22;
-}
-
-.halIndicator[data-state="active"] {
-  --hal-intensity: 0.85;
-}
-
 .halLens {
   position: relative;
   width: 100%;
