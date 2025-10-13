@@ -4,7 +4,6 @@ import { MouseEvent, SyntheticEvent } from "react";
 import Alert from "@mui/material/Alert";
 import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
-import Tooltip from "@mui/material/Tooltip";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
@@ -23,7 +22,6 @@ export type SessionFeedback = {
 
 export type SessionControlsProps = {
   status: ConnectionStatus;
-  onConnect: () => void | Promise<void>;
   onDisconnect: () => void | Promise<void>;
   muted: boolean;
   onToggleMute: () => void;
@@ -40,7 +38,6 @@ export type SessionControlsProps = {
 
 export function SessionControls({
   status,
-  onConnect: _onConnect,
   onDisconnect,
   muted,
   onToggleMute,
@@ -57,17 +54,18 @@ export function SessionControls({
   const isConnecting = status === "connecting";
   const isConnected = status === "connected";
 
-  const micTooltip = !isConnected
+  const micLabel = !isConnected
     ? "Connect to enable microphone"
     : muted
       ? "Unmute microphone"
       : "Mute microphone";
 
-  const transcriptTooltip = transcriptOpen
+  const transcriptLabel = transcriptOpen
     ? "Close transcript drawer"
     : "Open transcript drawer";
+
   const resolvedThemeMode = themeMode === "dark" ? "dark" : "light";
-  const themeTooltip =
+  const themeLabel =
     resolvedThemeMode === "dark" ? "Switch to light mode" : "Switch to dark mode";
   const themeDisabled = typeof onToggleTheme !== "function";
 
@@ -91,89 +89,73 @@ export function SessionControls({
     <>
       <div className={styles.rail} data-testid="session-controls" data-align="edge">
         {isConnected ? (
-          <Tooltip title="Disconnect session" placement="left">
-            <span className={styles.iconWrapper}>
-              <IconButton
-                aria-label="Disconnect session"
-                aria-pressed
-                color={disconnectColor}
-                onClick={handleDisconnectClick}
-                size="large"
-                className={styles.iconButton}
-              >
-                <LogoutIcon fontSize="inherit" />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <IconButton
+            aria-label="Disconnect session"
+            aria-pressed
+            color={disconnectColor}
+            onClick={handleDisconnectClick}
+            size="large"
+            className={styles.iconButton}
+            title="Disconnect session"
+          >
+            <LogoutIcon fontSize="inherit" />
+          </IconButton>
         ) : null}
-        <Tooltip title={micTooltip} placement="left">
-          <span className={styles.iconWrapper}>
-            <IconButton
-              aria-label={micTooltip}
-              aria-pressed={muted}
-              color={micColor}
-              disabled={micDisabled}
-              onClick={(event) => {
-                event.preventDefault();
-                if (micDisabled) {
-                  return;
-                }
-                onToggleMute();
-              }}
-              size="large"
-              className={styles.iconButton}
-            >
-              {muted ? (
-                <MicOffIcon fontSize="inherit" />
-              ) : (
-                <MicIcon fontSize="inherit" />
-              )}
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title={transcriptTooltip} placement="left">
-          <span className={styles.iconWrapper}>
-            <IconButton
-              aria-label={transcriptTooltip}
-              aria-expanded={transcriptOpen}
-              color={transcriptOpen ? "secondary" : "default"}
-              data-testid="transcript-toggle"
-              onClick={(event) => {
-                event.preventDefault();
-                onToggleTranscript();
-              }}
-              size="large"
-              className={styles.iconButton}
-            >
-              <SubjectIcon fontSize="inherit" />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title={themeTooltip} placement="left">
-          <span className={styles.iconWrapper}>
-            <IconButton
-              aria-label={themeTooltip}
-              aria-pressed={resolvedThemeMode === "dark"}
-              className={styles.iconButton}
-              color="default"
-              disabled={themeDisabled}
-              onClick={(event) => {
-                event.preventDefault();
-                if (themeDisabled) {
-                  return;
-                }
-                onToggleTheme?.();
-              }}
-              size="large"
-            >
-              {resolvedThemeMode === "dark" ? (
-                <LightModeIcon fontSize="inherit" />
-              ) : (
-                <DarkModeIcon fontSize="inherit" />
-              )}
-            </IconButton>
-          </span>
-        </Tooltip>
+        <IconButton
+          aria-label={micLabel}
+          aria-pressed={muted}
+          color={micColor}
+          disabled={micDisabled}
+          onClick={(event) => {
+            event.preventDefault();
+            if (micDisabled) {
+              return;
+            }
+            onToggleMute();
+          }}
+          size="large"
+          className={styles.iconButton}
+          title={micLabel}
+        >
+          {muted ? <MicOffIcon fontSize="inherit" /> : <MicIcon fontSize="inherit" />}
+        </IconButton>
+        <IconButton
+          aria-label={transcriptLabel}
+          aria-expanded={transcriptOpen}
+          color={transcriptOpen ? "secondary" : "default"}
+          data-testid="transcript-toggle"
+          onClick={(event) => {
+            event.preventDefault();
+            onToggleTranscript();
+          }}
+          size="large"
+          className={styles.iconButton}
+          title={transcriptLabel}
+        >
+          <SubjectIcon fontSize="inherit" />
+        </IconButton>
+        <IconButton
+          aria-label={themeLabel}
+          aria-pressed={resolvedThemeMode === "dark"}
+          className={styles.iconButton}
+          color="default"
+          disabled={themeDisabled}
+          onClick={(event) => {
+            event.preventDefault();
+            if (themeDisabled) {
+              return;
+            }
+            onToggleTheme?.();
+          }}
+          size="large"
+          title={themeLabel}
+        >
+          {resolvedThemeMode === "dark" ? (
+            <LightModeIcon fontSize="inherit" />
+          ) : (
+            <DarkModeIcon fontSize="inherit" />
+          )}
+        </IconButton>
         <span className={styles.halIndicatorWrapper}>
           <HalIndicator
             active={voiceActive}

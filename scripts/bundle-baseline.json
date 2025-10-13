@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2025-10-13T00:00:00.000Z",
+  "notes": "Baseline metrics captured prior to ui-streamlining-and-cleanup T006 asset cleanup",
+  "sharedFirstLoadJsKb": 102,
+  "routes": {
+    "/": {
+      "sizeKb": 112,
+      "firstLoadJsKb": 246
+    }
+  }
+}

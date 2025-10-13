@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Typography from "@mui/material/Typography";
 import { RealtimeAgent, RealtimeSession } from "@openai/agents/realtime";
+import dynamic from "next/dynamic";
 import styles from "./chat-client.module.css";
 
 import { SessionControls, SessionFeedback, ConnectionStatus } from "./components/SessionControls";
 import { EntryOverlay } from "./components/EntryOverlay";
-import { TranscriptDrawer } from "./components/TranscriptDrawer";
+import type { TranscriptDrawerProps } from "./components/TranscriptDrawer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
 import { logTelemetry, type TelemetryTransport } from "./lib/analytics";
 import { createRealtimeSession } from "./lib/realtime-session-factory";
@@ -28,6 +29,12 @@ const defaultVoiceActivityState: VoiceActivityState = {
   active: false,
   hasMetrics: false,
 };
+
+const TranscriptDrawer = dynamic<TranscriptDrawerProps>(
+  () =>
+    import("./components/TranscriptDrawer").then((module) => module.TranscriptDrawer),
+  { ssr: false, loading: () => null },
+);
 
 const clampLevel = (value: number) => {
   if (!Number.isFinite(value)) {

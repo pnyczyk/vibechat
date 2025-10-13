@@ -2,7 +2,6 @@
 
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
 import BoltIcon from "@mui/icons-material/Bolt";
 import Typography from "@mui/material/Typography";
 import { ConnectionStatus } from "./SessionControls";
@@ -33,29 +32,26 @@ export function EntryOverlay({ status, error, onConnect }: EntryOverlayProps) {
 
   return (
     <div className={styles.entryOverlay} data-visible={!isConnected}>
-      <Tooltip title={isConnecting ? "Connecting…" : "Connect"} placement="top">
-        <span>
-          <IconButton
-            className={styles.entryButton}
-            aria-label={isConnecting ? "Connecting" : "Start voice session"}
-            size="large"
-            disabled={isConnecting}
-            onClick={(event) => {
-              event.preventDefault();
-              if (isConnecting) {
-                return;
-              }
-              void onConnect();
-            }}
-          >
-            {isConnecting ? (
-              <CircularProgress size="3.5rem" thickness={3.5} />
-            ) : (
-              <BoltIcon sx={{ fontSize: "3.5rem" }} />
-            )}
-          </IconButton>
-        </span>
-      </Tooltip>
+      <IconButton
+        className={styles.entryButton}
+        aria-label={isConnecting ? "Connecting" : "Start voice session"}
+        size="large"
+        disabled={isConnecting}
+        onClick={(event) => {
+          event.preventDefault();
+          if (isConnecting) {
+            return;
+          }
+          void onConnect();
+        }}
+        title={isConnecting ? "Connecting…" : "Connect"}
+      >
+        {isConnecting ? (
+          <CircularProgress size="3.5rem" thickness={3.5} />
+        ) : (
+          <BoltIcon sx={{ fontSize: "3.5rem" }} />
+        )}
+      </IconButton>
       <Typography variant="h6" className={styles.entryHint} component="p">
         {copy}
       </Typography>
