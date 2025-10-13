@@ -77,10 +77,19 @@ export function HalIndicator({ level, active, hasMetrics }: HalIndicatorProps) {
       aria-label={label}
       data-testid="voice-activity-indicator"
     >
-      <div className={styles.halLens} aria-hidden="true">
-        <span className={styles.halRing} />
-        <span className={styles.halCore} />
-        <span className={styles.halGlint} />
+      <div className={styles.debugBar}>
+        <div className={styles.debugBarLabel}>
+          Level: {level.toFixed(3)}
+        </div>
+        <div className={styles.debugBarTrack}>
+          <div
+            className={styles.debugBarFill}
+            style={{ width: `${level * 100}%` } as CSSProperties}
+          />
+        </div>
+        <div className={styles.debugBarLabel}>
+          Intensity: {intensity.toFixed(3)} | {state}
+        </div>
       </div>
       <span className={styles.srOnly}>{label}</span>
     </div>
