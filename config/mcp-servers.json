@@ -1,0 +1,11 @@
+{
+  "servers": [
+    {
+      "id": "codex-tasks",
+      "command": "codex-tasks",
+      "args": ["mcp"],
+      "description": "Seed MCP server for Codex Tasks workflow",
+      "enabled": true
+    }
+  ]
+}
