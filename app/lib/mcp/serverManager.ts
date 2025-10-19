@@ -11,6 +11,7 @@ import {
 } from './config';
 import {
   ProcessRegistry,
+  type RuntimeServerSnapshot,
   type ServerLifecycleStatus,
   type ServerStatusSnapshot,
 } from './process-registry';
@@ -140,6 +141,10 @@ export class McpServerManager {
 
   getStatuses(): ServerStatusSnapshot[] {
     return this.registry.list();
+  }
+
+  getRuntimeServers(): RuntimeServerSnapshot[] {
+    return this.registry.runtime();
   }
 
   private launchServer(definition: McpServerDefinition) {
