@@ -25,7 +25,7 @@ Introduce a versioned config file that lists MCP servers as stdio shell commands
 ---
 
 ## Task T002: Manage MCP Server Processes
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T001
 **Files:**
 - `app/lib/mcp/serverManager.ts`
