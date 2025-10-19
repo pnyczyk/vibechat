@@ -34,6 +34,10 @@ export interface ServerStatusSnapshot {
   pid?: number;
 }
 
+export interface RuntimeServerSnapshot extends ServerStatusSnapshot {
+  process?: ChildProcessWithoutNullStreams;
+}
+
 export class ProcessRegistry {
   private readonly processes = new Map<string, ServerProcessState>();
 
@@ -93,6 +97,19 @@ export class ProcessRegistry {
       lastExit: state.lastExit,
       lastStartedAt: state.lastStartedAt,
       pid: state.process?.pid,
+    }));
+  }
+
+  runtime(): RuntimeServerSnapshot[] {
+    return Array.from(this.processes.entries()).map(([id, state]) => ({
+      id,
+      definition: state.definition,
+      status: state.status,
+      restarts: state.restarts,
+      lastExit: state.lastExit,
+      lastStartedAt: state.lastStartedAt,
+      pid: state.process?.pid,
+      process: state.process,
     }));
   }
 }
