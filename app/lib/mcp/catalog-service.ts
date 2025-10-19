@@ -1,9 +1,15 @@
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 
-import { Client } from '@modelcontextprotocol/sdk/client';
-import type { Transport, TransportSendOptions } from '@modelcontextprotocol/sdk/shared/transport';
-import { ReadBuffer, serializeMessage } from '@modelcontextprotocol/sdk/shared/stdio';
-import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import type {
+  Transport,
+  TransportSendOptions,
+} from '@modelcontextprotocol/sdk/shared/transport.js';
+import {
+  ReadBuffer,
+  serializeMessage,
+} from '@modelcontextprotocol/sdk/shared/stdio.js';
+import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 
 import type { McpServerDefinition } from './config';
 import { McpServerManager } from './serverManager';
