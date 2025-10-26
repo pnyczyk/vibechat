@@ -1,18 +1,8 @@
-import type { ChildProcessWithoutNullStreams } from 'node:child_process';
-
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import type {
-  Transport,
-  TransportSendOptions,
-} from '@modelcontextprotocol/sdk/shared/transport.js';
-import {
-  ReadBuffer,
-  serializeMessage,
-} from '@modelcontextprotocol/sdk/shared/stdio.js';
-import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
-
-import type { McpServerDefinition } from './config';
 import { McpServerManager } from './serverManager';
+import { McpClientPool } from './client-pool';
+import { McpToolPolicy } from './tool-policy';
+import { getMcpRuntime } from './runtime';
+import { recordCatalogHandshake } from './telemetry';
 
 type RuntimeServer = ReturnType<McpServerManager['getRuntimeServers']>[number];
 
@@ -38,120 +28,16 @@ export interface McpCatalogServiceLogger {
 
 export interface McpCatalogServiceOptions {
   manager?: McpServerManager;
+  clientPool?: McpClientPool;
+  policy?: McpToolPolicy;
   logger?: McpCatalogServiceLogger;
   cacheTtlMs?: number;
   requestTimeoutMs?: number;
   now?: () => number;
 }
 
-const CLIENT_INFO = { name: 'vibechat-mcp-client', version: '0.1.0' };
 const DEFAULT_CACHE_TTL = 5_000;
 const DEFAULT_REQUEST_TIMEOUT = 400;
-
-class ExistingProcessTransport implements Transport {
-  sessionId?: string;
-
-  onclose?: () => void;
-
-  onerror?: (error: Error) => void;
-
-  onmessage?: (message: JSONRPCMessage) => void;
-
-  private readonly readBuffer = new ReadBuffer();
-
-  private readonly stdoutHandler = (chunk: Buffer) => this.handleChunk(chunk);
-
-  private readonly stdoutErrorHandler = (error: Error) =>
-    this.onerror?.(error);
-
-  private readonly processExitHandler = () => this.close().catch(() => {});
-
-  private readonly processErrorHandler = (error: Error) =>
-    this.onerror?.(error);
-
-  private closed = false;
-
-  constructor(
-    private readonly child: ChildProcessWithoutNullStreams,
-  ) {}
-
-  async start(): Promise<void> {
-    if (!this.child.stdout || !this.child.stdin) {
-      throw new Error('MCP server does not expose stdio streams');
-    }
-
-    this.child.stdout.on('data', this.stdoutHandler);
-    this.child.stdout.on('error', this.stdoutErrorHandler);
-    this.child.once('exit', this.processExitHandler);
-    this.child.once('error', this.processErrorHandler);
-  }
-
-  async send(message: JSONRPCMessage, _options?: TransportSendOptions): Promise<void> {
-    if (this.closed || !this.child.stdin?.writable) {
-      throw new Error('Cannot send message: transport not writable');
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      const payload = serializeMessage(message);
-      const stdin = this.child.stdin;
-      if (!stdin) {
-        reject(new Error('Child process stdin not available'));
-        return;
-      }
-
-      const writeSucceeded = stdin.write(payload);
-      if (writeSucceeded) {
-        resolve();
-        return;
-      }
-
-      const cleanup = (error?: Error | null) => {
-        stdin.removeListener('drain', onDrain);
-        stdin.removeListener('error', onError);
-        if (error) {
-          reject(error);
-        } else {
-          resolve();
-        }
-      };
-
-      const onDrain = () => cleanup();
-      const onError = (error: Error) => cleanup(error);
-      stdin.once('drain', onDrain);
-      stdin.once('error', onError);
-    });
-  }
-
-  async close(): Promise<void> {
-    if (this.closed) {
-      return;
-    }
-    this.closed = true;
-    this.child.stdout?.off('data', this.stdoutHandler);
-    this.child.stdout?.off('error', this.stdoutErrorHandler);
-    this.child.off('exit', this.processExitHandler);
-    this.child.off('error', this.processErrorHandler);
-    this.readBuffer.clear();
-    this.onclose?.();
-  }
-
-  private handleChunk(chunk: Buffer) {
-    this.readBuffer.append(chunk);
-
-    while (true) {
-      try {
-        const message = this.readBuffer.readMessage();
-        if (message === null) {
-          break;
-        }
-        this.onmessage?.(message);
-      } catch (error) {
-        this.onerror?.(error as Error);
-        break;
-      }
-    }
-  }
-}
 
 export class McpCatalogService {
   private readonly logger: Required<McpCatalogServiceLogger>;
@@ -162,27 +48,40 @@ export class McpCatalogService {
 
   private readonly manager: McpServerManager;
 
+  private readonly clientPool: McpClientPool;
+
+  private readonly policy: McpToolPolicy;
+
   private readonly now: () => number;
 
   private cache?: { expiresAt: number; payload: McpCatalogPayload };
 
   private managerStarted = false;
 
-  private readonly clients = new Map<
-    string,
-    {
-      client: Client;
-      transport: ExistingProcessTransport;
-      pid?: number;
-    }
-  >();
-
   constructor(options: McpCatalogServiceOptions = {}) {
-    this.manager = options.manager ?? new McpServerManager();
-    this.logger = {
+    const logger: Required<McpCatalogServiceLogger> = {
       debug: options.logger?.debug ?? (() => {}),
       warn: options.logger?.warn ?? console.warn.bind(console),
     };
+
+    if (options.manager || options.clientPool || options.policy) {
+      const requestTimeout =
+        options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
+      this.manager = options.manager ?? new McpServerManager();
+      this.clientPool =
+        options.clientPool ??
+        new McpClientPool({
+          requestTimeoutMs: requestTimeout,
+          logger,
+        });
+      this.policy = options.policy ?? new McpToolPolicy();
+    } else {
+      const runtime = getMcpRuntime();
+      this.manager = runtime.manager;
+      this.clientPool = runtime.clientPool;
+      this.policy = runtime.policy;
+    }
+    this.logger = logger;
     this.cacheTtlMs = options.cacheTtlMs ?? DEFAULT_CACHE_TTL;
     this.requestTimeoutMs =
       options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
@@ -190,33 +89,66 @@ export class McpCatalogService {
   }
 
   async getCatalog(): Promise<McpCatalogPayload> {
+    const startedAt = this.now();
+
     await this.ensureManagerStarted();
 
-    const now = this.now();
-    if (this.cache && this.cache.expiresAt > now) {
-      this.logger.debug?.('[mcp-catalog] serving cached catalog');
-      return this.cache.payload;
-    }
+    try {
+      const now = this.now();
+      if (this.cache && this.cache.expiresAt > now) {
+        this.logger.debug?.('[mcp-catalog] serving cached catalog');
+        recordCatalogHandshake({
+          type: 'catalog_handshake',
+          durationMs: this.now() - startedAt,
+          toolCount: this.cache.payload.tools.length,
+          cacheHit: true,
+          success: true,
+          collectedAt: this.cache.payload.collectedAt,
+        });
+        return this.cache.payload;
+      }
 
-    const runtimeServers = this.manager
-      .getRuntimeServers()
-      .filter(
-        (server) =>
-          server.status === 'running' && Boolean(server.process?.stdin),
+      const runtimeServers = this.manager
+        .getRuntimeServers()
+        .filter(
+          (server) =>
+            server.status === 'running' && Boolean(server.process?.stdin),
+        );
+
+      const results = await Promise.all(
+        runtimeServers.map((server) => this.fetchTools(server)),
       );
 
-    const results = await Promise.all(
-      runtimeServers.map((server) => this.fetchTools(server)),
-    );
+      const tools = results.flat();
+      const payload: McpCatalogPayload = {
+        tools: tools.filter((tool) => !this.policy.isRevoked(tool.id)),
+        collectedAt: this.now(),
+      };
 
-    const tools = results.flat();
-    const payload: McpCatalogPayload = {
-      tools,
-      collectedAt: this.now(),
-    };
-
-    this.cache = { payload, expiresAt: payload.collectedAt + this.cacheTtlMs };
-    return payload;
+      this.cache = {
+        payload,
+        expiresAt: payload.collectedAt + this.cacheTtlMs,
+      };
+      recordCatalogHandshake({
+        type: 'catalog_handshake',
+        durationMs: this.now() - startedAt,
+        toolCount: payload.tools.length,
+        cacheHit: false,
+        success: true,
+        collectedAt: payload.collectedAt,
+      });
+      return payload;
+    } catch (error) {
+      recordCatalogHandshake({
+        type: 'catalog_handshake',
+        durationMs: this.now() - startedAt,
+        toolCount: 0,
+        cacheHit: false,
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   invalidateCache(): void {
@@ -237,10 +169,11 @@ export class McpCatalogService {
       return [];
     }
 
-    const client = await this.getOrCreateClient(server.definition, {
+    const client = await this.clientPool.getClient(
+      server.definition,
       process,
-      pid: server.pid ?? process.pid ?? undefined,
-    });
+      server.pid ?? process.pid ?? undefined,
+    );
 
     try {
       const tools: McpToolDescriptor[] = [];
@@ -290,49 +223,6 @@ export class McpCatalogService {
       );
       return [];
     }
-  }
-
-  private async getOrCreateClient(
-    definition: McpServerDefinition,
-    context: {
-      process: ChildProcessWithoutNullStreams;
-      pid?: number;
-    },
-  ): Promise<Client> {
-    const existing = this.clients.get(definition.id);
-    const currentPid = context.pid;
-
-    if (existing && existing.pid === currentPid) {
-      return existing.client;
-    }
-
-    if (existing) {
-      await existing.client.close().catch(() => {});
-      await existing.transport.close().catch(() => {});
-      this.clients.delete(definition.id);
-    }
-
-    const transport = new ExistingProcessTransport(context.process);
-    const client = new Client(CLIENT_INFO, {
-      capabilities: {
-        tools: {},
-      },
-    });
-
-    transport.onclose = () => {
-      this.clients.delete(definition.id);
-    };
-    transport.onerror = (error) => {
-      this.logger.warn?.(
-        `[mcp-catalog] transport error for "${definition.id}": ${String(
-          error,
-        )}`,
-      );
-    };
-
-    await client.connect(transport, { timeout: this.requestTimeoutMs });
-    this.clients.set(definition.id, { client, transport, pid: currentPid });
-    return client;
   }
 }
 

@@ -6,6 +6,8 @@ import { PassThrough } from 'node:stream';
 
 import { McpCatalogService } from '@/app/lib/mcp/catalog-service';
 import type { McpServerManager } from '@/app/lib/mcp/serverManager';
+import { McpToolPolicy } from '@/app/lib/mcp/tool-policy';
+import { setMcpTelemetryHandlerForTesting } from '@/app/lib/mcp/telemetry';
 
 type JsonRpcRequest = {
   jsonrpc: '2.0';
@@ -22,6 +24,20 @@ type JsonRpcResponse = {
 };
 
 const latestProtocolVersion = '2025-06-18';
+
+let telemetryEvents: unknown[] = [];
+
+beforeEach(() => {
+  telemetryEvents = [];
+  setMcpTelemetryHandlerForTesting((event) => {
+    telemetryEvents.push(event);
+  });
+});
+
+afterEach(() => {
+  setMcpTelemetryHandlerForTesting(null);
+  jest.clearAllMocks();
+});
 
 const createRpcProcess = (
   handlers: Record<string, (request: JsonRpcRequest) => JsonRpcResponse | void>,
@@ -180,6 +196,14 @@ describe('McpCatalogService', () => {
         }),
       ]),
     );
+    expect(
+      telemetryEvents.find(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          (event as { type?: string }).type === 'catalog_handshake',
+      ),
+    ).toBeDefined();
   });
 
   it('caches catalog responses within TTL and refreshes after expiry', async () => {
@@ -285,6 +309,58 @@ describe('McpCatalogService', () => {
     const third = await service.getCatalog();
     expect(third.tools[0].name).toBe('Echo2');
     expect(manager.getRuntimeServers).toHaveBeenCalledTimes(2);
+  });
+
+  it('excludes revoked tools from catalog results', async () => {
+    const process = createRpcProcess({
+      initialize: (request) => ({
+        jsonrpc: '2.0',
+        id: request.id ?? null,
+        result: {
+          protocolVersion: latestProtocolVersion,
+          capabilities: { tools: {} },
+          serverInfo: { name: 'mock', version: '1.0.0' },
+        },
+      }),
+      'notifications/initialized': () => undefined,
+      'tools/list': (request) => ({
+        jsonrpc: '2.0',
+        id: request.id ?? null,
+        result: {
+          tools: [
+            { name: 'Keep', inputSchema: { type: 'object', properties: {} } },
+            { name: 'Drop', inputSchema: { type: 'object', properties: {} } },
+          ],
+        },
+      }),
+    });
+
+    const manager = {
+      start: jest.fn().mockResolvedValue(undefined),
+      getRuntimeServers: jest.fn().mockReturnValue([
+        {
+          id: 'server-a',
+          definition: { id: 'server-a', command: 'cmd', args: [], enabled: true },
+          status: 'running' as const,
+          restarts: 0,
+          pid: 1,
+          process,
+        },
+      ]),
+    } as unknown as McpServerManager;
+
+    const policy = new McpToolPolicy();
+    policy.revoke(['server-a:Drop']);
+
+    const service = new McpCatalogService({
+      manager,
+      policy,
+      requestTimeoutMs: 100,
+    });
+
+    const result = await service.getCatalog();
+    expect(result.tools).toHaveLength(1);
+    expect(result.tools[0].id).toBe('server-a:Keep');
   });
 
   it('logs and recovers when tools/list times out', async () => {

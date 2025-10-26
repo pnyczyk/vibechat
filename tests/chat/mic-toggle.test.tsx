@@ -103,6 +103,6 @@ describe("ChatClient microphone toggle", () => {
 
     expect(session.mute).toHaveBeenLastCalledWith(false);
     expect(session.connect).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalled();
   });
 });

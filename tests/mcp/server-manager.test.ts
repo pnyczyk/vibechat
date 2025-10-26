@@ -196,4 +196,74 @@ describe('McpServerManager', () => {
       status: 'stopped',
     });
   });
+
+  it('reloads configuration and restarts changed servers', async () => {
+    const child1 = createMockChildProcess();
+    const child2 = createMockChildProcess();
+    const child3 = createMockChildProcess();
+
+    const spawnMock = jest
+      .fn()
+      .mockReturnValueOnce(child1)
+      .mockReturnValueOnce(child2)
+      .mockReturnValueOnce(child3);
+
+    const logger = createLogger();
+    const configs = [
+      {
+        servers: [
+          {
+            id: 'codex',
+            command: 'codex-tasks',
+            args: ['mcp'],
+            enabled: true,
+          },
+        ],
+      },
+      {
+        servers: [
+          {
+            id: 'codex',
+            command: 'codex-tasks',
+            args: ['mcp', '--verbose'],
+            enabled: true,
+          },
+          {
+            id: 'analysis',
+            command: 'analysis-tool',
+            args: ['start'],
+            enabled: true,
+          },
+        ],
+      },
+    ];
+
+    let index = 0;
+    const manager = new McpServerManager({
+      spawn: spawnMock,
+      logger,
+      loadConfig: async () => configs[index],
+    });
+
+    await manager.start();
+    child1.emit('spawn');
+
+    index = 1;
+    const reloadPromise = manager.reload();
+    child1.emit('exit', 0, null);
+    await reloadPromise;
+
+    expect(spawnMock).toHaveBeenCalledTimes(3);
+    expect(spawnMock.mock.calls[1][0]).toBe('codex-tasks');
+    expect(spawnMock.mock.calls[1][1]).toEqual(['mcp', '--verbose']);
+    expect(spawnMock.mock.calls[2][0]).toBe('analysis-tool');
+
+    const statuses = manager.getStatuses();
+    expect(statuses).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'codex', status: 'starting' }),
+        expect.objectContaining({ id: 'analysis', status: 'starting' }),
+      ]),
+    );
+  });
 });

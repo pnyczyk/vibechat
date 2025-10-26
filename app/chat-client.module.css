@@ -93,6 +93,53 @@
   gap: 0.5rem;
 }
 
+.toolSummary {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--mui-palette-text-secondary, rgba(226, 232, 240, 0.75));
+}
+
+.toolRuns {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.35);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.toolRun {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--mui-palette-text-secondary, rgba(226, 232, 240, 0.8));
+}
+
+.toolRun[data-status="success"] {
+  color: var(--mui-palette-success-main, #22c55e);
+}
+
+.toolRun[data-status="error"] {
+  color: var(--mui-palette-error-main, #ef4444);
+}
+
+.toolRun[data-status="cancelled"] {
+  color: var(--mui-palette-warning-main, #f59e0b);
+}
+
+.toolRunName {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.toolRunMessage {
+  flex: 1;
+  text-align: right;
+  opacity: 0.85;
+}
+
 .statusText {
   display: flex;
   flex-direction: column;

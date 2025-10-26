@@ -147,6 +147,54 @@ export class McpServerManager {
     return this.registry.runtime();
   }
 
+  async reload(): Promise<ReloadResult> {
+    if (!this.started) {
+      await this.start();
+      return { started: [], stopped: [], restarted: [] };
+    }
+
+    const config = await this.loadConfigFn();
+    const enabledDefinitions = new Map(
+      config.servers
+        .filter((server) => server.enabled !== false)
+        .map((server) => [server.id, server]),
+    );
+
+    const started: string[] = [];
+    const stopped: string[] = [];
+    const restarted: string[] = [];
+
+    const currentStatuses = this.registry.list();
+
+    for (const status of currentStatuses) {
+      const nextDefinition = enabledDefinitions.get(status.id);
+      if (!nextDefinition) {
+        await this.stopServer(status.id);
+        stopped.push(status.id);
+        continue;
+      }
+
+      const changed = this.hasDefinitionChanged(
+        status.definition,
+        nextDefinition,
+      );
+
+      enabledDefinitions.delete(status.id);
+
+      if (changed) {
+        await this.restartServer(nextDefinition);
+        restarted.push(status.id);
+      }
+    }
+
+    for (const definition of enabledDefinitions.values()) {
+      this.launchServer(definition);
+      started.push(definition.id);
+    }
+
+    return { started, stopped, restarted };
+  }
+
   private launchServer(definition: McpServerDefinition) {
     const state = this.registry.ensure(definition);
     this.stopping.delete(definition.id);
@@ -236,4 +284,62 @@ export class McpServerManager {
   private updateStatus(id: string, status: ServerLifecycleStatus) {
     this.registry.update(id, { status });
   }
+
+  private async restartServer(definition: McpServerDefinition): Promise<void> {
+    await this.stopServer(definition.id);
+    this.launchServer(definition);
+  }
+
+  private async stopServer(id: string): Promise<void> {
+    const state = this.registry.get(id);
+    if (!state) {
+      return;
+    }
+
+    const timer = this.restartTimers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      this.restartTimers.delete(id);
+    }
+
+    if (!state.process) {
+      this.registry.update(id, { status: 'stopped' });
+      return;
+    }
+
+    this.stopping.add(id);
+
+    await new Promise<void>((resolve) => {
+      state.process?.once('exit', () => resolve());
+      const killed = state.process?.kill('SIGTERM');
+      if (killed === false) {
+        resolve();
+      }
+    });
+
+    this.registry.update(id, {
+      process: undefined,
+      status: 'stopped',
+    });
+    this.stopping.delete(id);
+  }
+
+  private hasDefinitionChanged(
+    current: McpServerDefinition,
+    next: McpServerDefinition,
+  ): boolean {
+    return (
+      current.command !== next.command ||
+      current.description !== next.description ||
+      current.enabled !== next.enabled ||
+      current.args.length !== next.args.length ||
+      current.args.some((arg, index) => next.args[index] !== arg)
+    );
+  }
+}
+
+export interface ReloadResult {
+  started: string[];
+  stopped: string[];
+  restarted: string[];
 }

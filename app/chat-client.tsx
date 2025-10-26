@@ -10,6 +10,11 @@ import { SessionControls, SessionFeedback, ConnectionStatus } from "./components
 import { EntryOverlay } from "./components/EntryOverlay";
 import type { TranscriptDrawerProps } from "./components/TranscriptDrawer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
+import {
+  McpAdapter,
+  type McpToolSummary,
+  type ToolRunState,
+} from "./lib/voice-agent/mcp-adapter";
 import { logTelemetry, type TelemetryTransport } from "./lib/analytics";
 import { createRealtimeSession } from "./lib/realtime-session-factory";
 import { useThemeController } from "./providers";
@@ -51,6 +56,7 @@ export function ChatClient() {
   const [muted, setMuted] = useState(false);
   const [session, setSession] = useState<RealtimeSession | null>(null);
   const transcriptStore = useMemo(() => new TranscriptStore(), []);
+  const mcpAdapter = useMemo(() => new McpAdapter(), []);
   const [voiceActivity, setVoiceActivity] = useState<VoiceActivityState>(
     defaultVoiceActivityState,
   );
@@ -58,6 +64,8 @@ export function ChatClient() {
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
   const [isTranscriptReady, setIsTranscriptReady] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [toolRuns, setToolRuns] = useState<ToolRunState[]>([]);
+  const [mcpTools, setMcpTools] = useState<McpToolSummary[]>([]);
   const entryStartRef = useRef<number | null>(null);
   const entryTimestampRef = useRef<string | null>(null);
   const voiceStateRef = useRef<"waiting" | "idle" | "active">("waiting");
@@ -93,6 +101,26 @@ export function ChatClient() {
   }, [session]);
 
   useEffect(() => {
+    if (!session) {
+      mcpAdapter.detach();
+      setToolRuns([]);
+      return;
+    }
+
+    void (async () => {
+      try {
+        await mcpAdapter.attach(session);
+      } catch (error) {
+        console.warn('[mcp-adapter] failed to attach', error);
+      }
+    })();
+
+    return () => {
+      mcpAdapter.detach();
+    };
+  }, [session, mcpAdapter]);
+
+  useEffect(() => {
     transcriptStore.setSession(session);
 
     return () => {
@@ -107,6 +135,48 @@ export function ChatClient() {
 
     return unsubscribe;
   }, [transcriptStore]);
+
+  useEffect(() => {
+    const unsubscribe = mcpAdapter.subscribe((event) => {
+      if (event.type === "tools-changed") {
+        setMcpTools(event.tools);
+        return;
+      }
+
+      if (event.type === "run-updated") {
+        setToolRuns((prev) => {
+          const next = [...prev];
+          const index = next.findIndex((run) => run.runId === event.run.runId);
+          const copy = { ...event.run };
+          if (index === -1) {
+            next.push(copy);
+          } else {
+            next[index] = copy;
+          }
+          return next;
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [mcpAdapter]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const globalWindow = window as typeof window & {
+      __vibeMcpAdapter?: McpAdapter;
+    };
+    globalWindow.__vibeMcpAdapter = mcpAdapter;
+
+    return () => {
+      if (globalWindow.__vibeMcpAdapter === mcpAdapter) {
+        delete globalWindow.__vibeMcpAdapter;
+      }
+    };
+  }, [mcpAdapter]);
 
   useEffect(() => {
     return () => {
@@ -289,12 +359,14 @@ export function ChatClient() {
     setFeedback({ message: "Disconnected from session", severity: "success" });
     setVoiceActivity(defaultVoiceActivityState);
     setIsTranscriptOpen(false);
+    setToolRuns([]);
+    mcpAdapter.detach();
     voiceStateRef.current = "waiting";
     entryStartRef.current = null;
     entryTimestampRef.current = null;
     logTelemetry("voice_activity_transition", { state: "waiting", hasMetrics: false });
     logTelemetry("session_disconnect", { reason: "user" });
-  }, [session]);
+  }, [session, mcpAdapter]);
 
   const handleToggleMute = useCallback(() => {
     if (!session) {
@@ -571,6 +643,32 @@ export function ChatClient() {
             )}
           </div>
         </footer>
+        {mcpTools.length > 0 && (
+          <div
+            className={styles.toolSummary}
+            data-testid="mcp-tool-summary"
+          >
+            MCP tools ready: {mcpTools.length}
+          </div>
+        )}
+        {toolRuns.length > 0 && (
+          <div
+            className={styles.toolRuns}
+            data-testid="mcp-tool-runs"
+            title={mcpTools.map((tool) => tool.name).join(", ")}
+          >
+            {toolRuns.slice(-3).map((run) => (
+              <div
+                key={run.runId}
+                className={styles.toolRun}
+                data-status={run.status}
+              >
+                <span className={styles.toolRunName}>{run.toolName}</span>
+                <span className={styles.toolRunMessage}>{run.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
 
       <aside className={styles.controlRail} aria-label="Session controls">
