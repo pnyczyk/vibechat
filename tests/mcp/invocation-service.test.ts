@@ -130,7 +130,7 @@ describe('McpInvocationService', () => {
         name: 'tool-x',
         arguments: { query: 'hello' },
       },
-      undefined,
+      expect.anything(),
       expect.objectContaining({
         onprogress: expect.any(Function),
       }),
@@ -150,6 +150,44 @@ describe('McpInvocationService', () => {
           (event as { status?: string }).status === 'success',
       ),
     ).toBeDefined();
+  });
+
+  it('handles tool responses with array structuredContent', async () => {
+    const client = {
+      callTool: jest.fn().mockResolvedValue({
+        structuredContent: [
+          { id: 'task-1', state: 'STOPPED' },
+          { id: 'task-2', state: 'RUNNING' },
+        ],
+        isError: false,
+      }),
+    };
+
+    const clientPool: Partial<McpClientPool> = {
+      getClient: jest.fn().mockResolvedValue(client),
+    };
+
+    const { service } = createService({ clientPool });
+
+    const outcome = await service.invoke(
+      {
+        toolId: 'server-a:tool-x',
+        input: {},
+      },
+      handler,
+    );
+
+    expect(client.callTool).toHaveBeenCalledTimes(1);
+    expect(outcome.status).toBe('success');
+    expect(
+      events.some(
+        (event) =>
+          event.type === 'output' &&
+          Array.isArray(
+            (event as { content?: unknown }).content ?? undefined,
+          ),
+      ),
+    ).toBe(true);
   });
 
   it('fails when permissions missing', async () => {

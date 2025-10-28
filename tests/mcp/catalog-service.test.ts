@@ -206,6 +206,73 @@ describe('McpCatalogService', () => {
     ).toBeDefined();
   });
 
+  it('waits for MCP servers to expose tools during startup before returning catalog', async () => {
+    let listCalls = 0;
+    const process = createRpcProcess({
+      initialize: (request) => ({
+        jsonrpc: '2.0',
+        id: request.id ?? null,
+        result: {
+          protocolVersion: latestProtocolVersion,
+          capabilities: { tools: {} },
+          serverInfo: { name: 'warmup', version: '1.0.0' },
+        },
+      }),
+      'notifications/initialized': () => undefined,
+      'tools/list': (request) => {
+        listCalls += 1;
+        return {
+          jsonrpc: '2.0',
+          id: request.id ?? null,
+          result: {
+            tools:
+              listCalls < 2
+                ? []
+                : [
+                    {
+                      name: 'Stabilize',
+                      description: 'becomes available after warmup',
+                      inputSchema: { type: 'object', properties: {} },
+                    },
+                  ],
+          },
+        };
+      },
+    });
+
+    const manager = {
+      start: jest.fn().mockResolvedValue(undefined),
+      getRuntimeServers: jest.fn(() => [
+        {
+          id: 'warmup',
+          definition: { id: 'warmup', command: 'cmd', args: [], enabled: true },
+          status: 'running' as const,
+          restarts: 0,
+          pid: 42,
+          process,
+        },
+      ]),
+    } as unknown as McpServerManager;
+
+    const service = new McpCatalogService({
+      manager,
+      requestTimeoutMs: 100,
+      startupTimeoutMs: 500,
+      startupPollIntervalMs: 10,
+    });
+
+    const result = await service.getCatalog();
+
+    expect(manager.start).toHaveBeenCalledTimes(1);
+    expect(listCalls).toBeGreaterThanOrEqual(2);
+    expect(result.tools).toEqual([
+      expect.objectContaining({
+        id: 'warmup:Stabilize',
+        name: 'Stabilize',
+      }),
+    ]);
+  });
+
   it('caches catalog responses within TTL and refreshes after expiry', async () => {
     const firstProcess = createRpcProcess({
       initialize: (request) => ({
@@ -400,6 +467,8 @@ describe('McpCatalogService', () => {
       manager,
       requestTimeoutMs: 50,
       logger: { warn },
+      startupTimeoutMs: 100,
+      startupPollIntervalMs: 10,
     });
 
     const result = await service.getCatalog();

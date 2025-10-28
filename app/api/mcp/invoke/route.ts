@@ -2,8 +2,13 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getInvocationService } from '@/app/lib/mcp/invocation-service';
+import { ensureMcpServersStarted } from '@/app/lib/mcp/runtime';
 
 export const runtime = 'nodejs';
+
+void ensureMcpServersStarted().catch((error) => {
+  console.error('[mcp-invoke] failed to start MCP servers during bootstrap', error);
+});
 
 const invokeSchema = z.object({
   toolId: z.string().min(1, 'toolId is required'),
@@ -26,6 +31,18 @@ export async function POST(request: Request) {
         details: error instanceof Error ? error.message : String(error),
       },
       { status: 400 },
+    );
+  }
+
+  try {
+    await ensureMcpServersStarted();
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: 'Failed to start MCP servers',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
     );
   }
 

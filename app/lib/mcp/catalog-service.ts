@@ -1,7 +1,7 @@
 import { McpServerManager } from './serverManager';
 import { McpClientPool } from './client-pool';
 import { McpToolPolicy } from './tool-policy';
-import { getMcpRuntime } from './runtime';
+import { ensureMcpServersStarted, getMcpRuntime } from './runtime';
 import { recordCatalogHandshake } from './telemetry';
 
 type RuntimeServer = ReturnType<McpServerManager['getRuntimeServers']>[number];
@@ -33,11 +33,15 @@ export interface McpCatalogServiceOptions {
   logger?: McpCatalogServiceLogger;
   cacheTtlMs?: number;
   requestTimeoutMs?: number;
+  startupTimeoutMs?: number;
+  startupPollIntervalMs?: number;
   now?: () => number;
 }
 
 const DEFAULT_CACHE_TTL = 5_000;
 const DEFAULT_REQUEST_TIMEOUT = 400;
+const DEFAULT_STARTUP_TIMEOUT_MS = 5_000;
+const DEFAULT_STARTUP_POLL_INTERVAL_MS = 200;
 
 export class McpCatalogService {
   private readonly logger: Required<McpCatalogServiceLogger>;
@@ -45,6 +49,10 @@ export class McpCatalogService {
   private readonly cacheTtlMs: number;
 
   private readonly requestTimeoutMs: number;
+
+  private readonly startupTimeoutMs: number;
+
+  private readonly startupPollIntervalMs: number;
 
   private readonly manager: McpServerManager;
 
@@ -57,6 +65,8 @@ export class McpCatalogService {
   private cache?: { expiresAt: number; payload: McpCatalogPayload };
 
   private managerStarted = false;
+
+  private readonly ensureServersStarted: () => Promise<void>;
 
   constructor(options: McpCatalogServiceOptions = {}) {
     const logger: Required<McpCatalogServiceLogger> = {
@@ -75,16 +85,26 @@ export class McpCatalogService {
           logger,
         });
       this.policy = options.policy ?? new McpToolPolicy();
+      this.ensureServersStarted = async () => {
+        if (!this.managerStarted) {
+          await this.manager.start();
+        }
+      };
     } else {
       const runtime = getMcpRuntime();
       this.manager = runtime.manager;
       this.clientPool = runtime.clientPool;
       this.policy = runtime.policy;
+      this.ensureServersStarted = ensureMcpServersStarted;
     }
     this.logger = logger;
     this.cacheTtlMs = options.cacheTtlMs ?? DEFAULT_CACHE_TTL;
     this.requestTimeoutMs =
       options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
+    this.startupTimeoutMs =
+      options.startupTimeoutMs ?? DEFAULT_STARTUP_TIMEOUT_MS;
+    this.startupPollIntervalMs =
+      options.startupPollIntervalMs ?? DEFAULT_STARTUP_POLL_INTERVAL_MS;
     this.now = options.now ?? Date.now;
   }
 
@@ -108,22 +128,24 @@ export class McpCatalogService {
         return this.cache.payload;
       }
 
-      const runtimeServers = this.manager
-        .getRuntimeServers()
-        .filter(
-          (server) =>
-            server.status === 'running' && Boolean(server.process?.stdin),
-        );
-
-      const results = await Promise.all(
-        runtimeServers.map((server) => this.fetchTools(server)),
+      const {
+        collectedTools,
+        rawCount,
+        serverCount,
+      } = await this.collectToolsWithWarmup();
+      const tools = collectedTools.filter(
+        (tool) => !this.policy.isRevoked(tool.id),
       );
-
-      const tools = results.flat();
       const payload: McpCatalogPayload = {
-        tools: tools.filter((tool) => !this.policy.isRevoked(tool.id)),
+        tools,
         collectedAt: this.now(),
       };
+
+      if (rawCount === 0 && serverCount > 0 && tools.length === 0) {
+        this.logger.warn?.(
+          '[mcp-catalog] returning empty tool catalog after startup timeout',
+        );
+      }
 
       this.cache = {
         payload,
@@ -159,7 +181,7 @@ export class McpCatalogService {
     if (this.managerStarted) {
       return;
     }
-    await this.manager.start();
+    await this.ensureServersStarted();
     this.managerStarted = true;
   }
 
@@ -223,6 +245,81 @@ export class McpCatalogService {
       );
       return [];
     }
+  }
+
+  private async collectToolsWithWarmup() {
+    const deadline = this.now() + this.startupTimeoutMs;
+    let attempt = 0;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const runtimeServers = this.manager
+        .getRuntimeServers()
+        .filter(
+          (server) =>
+            (server.status === 'running' || server.status === 'starting') &&
+            Boolean(server.process?.stdin),
+        );
+
+      if (runtimeServers.length === 0) {
+        const now = this.now();
+        if (now >= deadline) {
+          return {
+            collectedTools: [] as McpToolDescriptor[],
+            rawCount: 0,
+            serverCount: 0,
+          };
+        }
+
+        const backoff = Math.min(
+          this.startupPollIntervalMs * 2 ** attempt,
+          this.startupTimeoutMs,
+        );
+        const delayMs = Math.min(backoff, Math.max(0, deadline - now));
+        attempt += 1;
+        await this.delay(delayMs);
+        continue;
+      }
+
+      const results = await Promise.all(
+        runtimeServers.map((server) => this.fetchTools(server)),
+      );
+      const flat = results.flat();
+      const rawCount = flat.length;
+      if (rawCount > 0) {
+        return {
+          collectedTools: flat,
+          rawCount,
+          serverCount: runtimeServers.length,
+        };
+      }
+
+      const now = this.now();
+      if (now >= deadline) {
+        return {
+          collectedTools: flat,
+          rawCount,
+          serverCount: runtimeServers.length,
+        };
+      }
+
+      const backoff = Math.min(
+        this.startupPollIntervalMs * 2 ** attempt,
+        this.startupTimeoutMs,
+      );
+      const delayMs = Math.min(backoff, Math.max(0, deadline - now));
+      attempt += 1;
+      await this.delay(delayMs);
+    }
+  }
+
+  private async delay(durationMs: number): Promise<void> {
+    if (durationMs <= 0) {
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, durationMs);
+    });
   }
 }
 

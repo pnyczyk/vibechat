@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { Progress } from '@modelcontextprotocol/sdk/types.js';
 import Ajv from 'ajv';
+import { z } from 'zod';
 
 import { getCatalogService } from './catalog-service';
 import type { McpCatalogService, McpToolDescriptor } from './catalog-service';
@@ -93,7 +94,17 @@ export interface McpInvocationServiceOptions {
   now?: () => number;
 }
 
-const DEFAULT_TIMEOUT_MS = 1_200;
+const DEFAULT_TIMEOUT_MS = 5_000;
+
+const RelaxedCallToolResultSchema = z
+  .object({
+    content: z.array(z.object({}).passthrough()).optional(),
+    structuredContent: z.unknown().optional(),
+    isError: z.boolean().optional(),
+    output: z.unknown().optional(),
+    formatted: z.unknown().optional(),
+  })
+  .passthrough();
 
 export class McpInvocationService {
   private readonly manager: McpServerManager;
@@ -234,7 +245,7 @@ export class McpInvocationService {
           name: toolName,
           arguments: payload ?? null,
         },
-        undefined,
+        RelaxedCallToolResultSchema,
         {
           signal: controller.signal,
           timeout: timeoutMs,

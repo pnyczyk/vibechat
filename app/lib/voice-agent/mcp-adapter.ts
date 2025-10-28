@@ -9,6 +9,7 @@ export type McpToolSummary = {
   id: string;
   name: string;
   description?: string;
+  inputSchema: Record<string, unknown> | null;
   permissions: string[];
   serverId: string;
 };
@@ -208,6 +209,9 @@ export class McpAdapter {
   }
 
   async attach(session: RealtimeSession): Promise<void> {
+    console.debug('[mcp-adapter] attach called', {
+      sameSession: this.session === session,
+    });
     if (this.session === session) {
       return;
     }
@@ -236,14 +240,23 @@ export class McpAdapter {
         id: tool.id,
         name: tool.name,
         description: tool.description,
+        inputSchema:
+          tool.inputSchema && typeof tool.inputSchema === 'object'
+            ? (tool.inputSchema as Record<string, unknown>)
+            : null,
         permissions: tool.permissions,
         serverId: tool.serverId,
       }));
       this.broadcast({ type: 'tools-changed', tools: this.tools });
       this.updateSessionTools();
     } catch (error) {
+      console.debug('[mcp-adapter] refreshCatalog error', error);
       console.warn('[mcp-adapter] Failed to refresh catalog', error);
     }
+  }
+
+  getTools(): McpToolSummary[] {
+    return [...this.tools];
   }
 
   private handleTransportEvent(event: TransportEvent) {
@@ -268,18 +281,7 @@ export class McpAdapter {
       return;
     }
 
-    const run: ToolRunState = {
-      runId: invocationId,
-      toolId: tool.id,
-      toolName: tool.name,
-      serverId: tool.serverId,
-      status: 'running',
-      message: 'Running tool…',
-      startedAt: Date.now(),
-    };
-
-    this.runs.set(run.runId, run);
-    this.broadcast({ type: 'run-updated', run });
+    const run = this.createRun(tool, invocationId);
 
     let parsedArgs: unknown = null;
     try {
@@ -299,7 +301,7 @@ export class McpAdapter {
       payload: parsedArgs,
       grantedPermissions: permissions,
       onEvent: (invokeEvent) => {
-        this.handleInvocationEvent(run, invokeEvent);
+        this.handleInvocationEvent(run, invokeEvent, { emitToSession: true });
       },
     }).catch((error) => {
       run.status = 'error';
@@ -309,7 +311,12 @@ export class McpAdapter {
     });
   }
 
-  private handleInvocationEvent(run: ToolRunState, event: InvokeEvent): void {
+  private handleInvocationEvent(
+    run: ToolRunState,
+    event: InvokeEvent,
+    options: { emitToSession: boolean },
+  ): void {
+    const { emitToSession } = options;
     switch (event.type) {
       case 'started':
       case 'progress':
@@ -324,7 +331,9 @@ export class McpAdapter {
         run.completedAt = Date.now();
         run.message = 'Completed';
         run.output = event.data;
-        this.emitToolResult(run, event.data);
+        if (emitToSession) {
+          this.emitToolResult(run, event.data);
+        }
         break;
       case 'failed':
         run.status = 'error';
@@ -369,6 +378,10 @@ export class McpAdapter {
   private updateSessionTools(): void {
     const session = this.session;
     if (!session || this.tools.length === 0) {
+      console.debug('[mcp-adapter] updateSessionTools skipped', {
+        hasSession: Boolean(session),
+        toolsCount: this.tools.length,
+      });
       return;
     }
 
@@ -387,6 +400,7 @@ export class McpAdapter {
     }));
 
     try {
+      console.debug('[mcp-adapter] Updating session tools', toolsConfig, session);
       session.transport.sendEvent({
         type: 'session.update',
         session: {
@@ -401,5 +415,88 @@ export class McpAdapter {
 
   private broadcast(event: ToolEvent | RunEvent): void {
     this.listeners.forEach((listener) => listener(event));
+  }
+
+  private createRun(tool: McpToolSummary, runId: string): ToolRunState {
+    const run: ToolRunState = {
+      runId,
+      toolId: tool.id,
+      toolName: tool.name,
+      serverId: tool.serverId,
+      status: 'running',
+      message: 'Running tool…',
+      startedAt: Date.now(),
+    };
+
+    this.runs.set(run.runId, run);
+    this.broadcast({ type: 'run-updated', run });
+    return run;
+  }
+
+  async runTool(toolId: string, payload: unknown): Promise<unknown> {
+    const tool = this.tools.find((entry) => entry.id === toolId);
+    if (!tool) {
+      throw new Error(`Tool not found: ${toolId}`);
+    }
+
+    const invocationId =
+      typeof globalThis.crypto !== 'undefined' &&
+      typeof globalThis.crypto.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    const run = this.createRun(tool, invocationId);
+    const permissions = this.grantedPermissions?.() ?? [];
+
+    return new Promise<unknown>((resolve, reject) => {
+      let finished = false;
+
+      const complete = (result: unknown) => {
+        if (!finished) {
+          finished = true;
+          resolve(result);
+        }
+      };
+
+      const fail = (error: unknown) => {
+        if (!finished) {
+          finished = true;
+          const err =
+            error instanceof Error
+              ? error
+              : new Error(typeof error === 'string' ? error : 'Tool failed');
+          reject(err);
+        }
+      };
+
+      void this.invokeTool({
+        invocationId,
+        toolId: tool.id,
+        payload,
+        grantedPermissions: permissions,
+        onEvent: (event) => {
+          this.handleInvocationEvent(run, event, { emitToSession: false });
+          switch (event.type) {
+            case 'completed':
+              complete(event.data);
+              break;
+            case 'failed':
+              fail(event.message ?? 'Tool failed');
+              break;
+            case 'cancelled':
+              fail(event.message ?? 'Invocation cancelled');
+              break;
+            default:
+              break;
+          }
+        },
+      }).catch((error) => {
+        run.status = 'error';
+        run.completedAt = Date.now();
+        run.message = error instanceof Error ? error.message : String(error);
+        this.broadcast({ type: 'run-updated', run });
+        fail(error);
+      });
+    });
   }
 }
