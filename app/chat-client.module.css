@@ -239,31 +239,60 @@
 @media (max-width: 1024px) {
   .layout {
     grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
   }
 
   .controlRail {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 2;
     justify-content: center;
-    height: auto;
+    align-items: stretch;
+    padding: 0;
+    background: linear-gradient(
+      to top,
+      rgba(15, 23, 42, 0.72),
+      rgba(15, 23, 42, 0.45),
+      rgba(15, 23, 42, 0)
+    );
+    backdrop-filter: blur(18px);
   }
 
   .controlRailInner {
     position: static;
-    width: max-content;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .canvas {
+    padding-bottom: clamp(4rem, 12vw, 6rem);
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .main {
     padding: 0;
   }
 
   .canvas {
     padding: clamp(1.25rem, 5vw, 1.75rem);
+    padding-bottom: clamp(4.5rem, 22vw, 7rem);
   }
 
   .controlRailInner {
-    width: max-content;
-    margin: 0 auto;
+    width: 100%;
+    padding: clamp(0.2rem, 1.5vw, 0.4rem)
+      clamp(0.75rem, 5vw, 1.25rem);
   }
+}
 
+@media (max-width: 640px) {
+  .canvas {
+    padding-bottom: clamp(4.75rem, 24vw, 7.5rem);
+  }
 }
