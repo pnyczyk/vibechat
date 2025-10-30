@@ -39,13 +39,14 @@ describe('McpInvocationService', () => {
   } = {}) => {
     const defaultManager: Partial<McpServerManager> = {
       getRuntimeServers: jest.fn().mockReturnValue([
-        {
-          definition: {
-            id: 'server-a',
-            command: 'test',
-            args: [],
-            enabled: true,
-          },
+          {
+            definition: {
+              id: 'server-a',
+              command: 'test',
+              args: [],
+              enabled: true,
+              workingDirectory: process.cwd(),
+            },
           status: 'running' as const,
           restarts: 0,
           pid: 1,

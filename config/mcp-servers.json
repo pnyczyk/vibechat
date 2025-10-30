@@ -4,6 +4,7 @@
       "id": "codex-tasks",
       "command": "codex-tasks",
       "args": ["mcp"],
+      "workingDirectory": "/var/vibechat/projects",
       "description": "Codex Tasks workflow",
       "enabled": true
     },
@@ -11,6 +12,7 @@
       "id": "filesystem",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "workingDirectory": "/var/vibechat/projects",
       "description": "Filesystem access",
       "enabled": true
     }

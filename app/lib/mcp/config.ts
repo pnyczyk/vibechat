@@ -7,6 +7,7 @@ export interface McpServerDefinition {
   args: string[];
   description?: string;
   enabled: boolean;
+  workingDirectory: string;
 }
 
 export interface McpServerConfig {
@@ -102,6 +103,12 @@ function validateAndNormalizeConfig(
 
   const servers = (input as { servers: unknown[] }).servers;
   const seenIds = new Set<string>();
+  const resolveWorkingDirectory = (value: string | undefined): string => {
+    if (!value || value.trim().length === 0) {
+      return process.cwd();
+    }
+    return path.resolve(process.cwd(), value.trim());
+  };
   const normalized: McpServerDefinition[] = servers.map((server, index) => {
     if (typeof server !== 'object' || server === null) {
       throwConfigError(
@@ -174,6 +181,19 @@ function validateAndNormalizeConfig(
       'description' in value && typeof value.description === 'string'
         ? value.description
         : undefined;
+    let workingDirectory: string;
+    if ('workingDirectory' in value) {
+      if (typeof value.workingDirectory !== 'string') {
+        throwConfigError(
+          `Server "${id}" has invalid "workingDirectory"; expected string`,
+          configPath,
+          logger,
+        );
+      }
+      workingDirectory = resolveWorkingDirectory(value.workingDirectory);
+    } else {
+      workingDirectory = resolveWorkingDirectory(undefined);
+    }
 
     return {
       id,
@@ -181,6 +201,7 @@ function validateAndNormalizeConfig(
       args,
       description,
       enabled,
+      workingDirectory,
     };
   });
 

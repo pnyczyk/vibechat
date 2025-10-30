@@ -34,6 +34,7 @@ describe('loadMcpConfigSync', () => {
           command: 'codex-tasks',
           args: ['mcp'],
           description: 'Codex tasks MCP server',
+          workingDirectory: '.',
           enabled: true,
         },
         {
@@ -53,6 +54,7 @@ describe('loadMcpConfigSync', () => {
       command: 'codex-tasks',
       args: ['mcp'],
       description: 'Codex tasks MCP server',
+      workingDirectory: path.resolve(process.cwd(), '.'),
       enabled: true,
     });
     expect(config.servers[1]).toEqual({
@@ -60,6 +62,7 @@ describe('loadMcpConfigSync', () => {
       command: 'echo',
       args: ['hello'],
       description: undefined,
+      workingDirectory: process.cwd(),
       enabled: false,
     });
     expect(logger.error).not.toHaveBeenCalled();
@@ -125,6 +128,9 @@ describe('loadMcpConfig', () => {
 
     const config = await loadMcpConfig({ configPath: filePath, logger });
 
-    expect(config.servers[0].id).toBe('async');
+    expect(config.servers[0]).toMatchObject({
+      id: 'async',
+      workingDirectory: process.cwd(),
+    });
   });
 });

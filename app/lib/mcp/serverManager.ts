@@ -202,6 +202,7 @@ export class McpServerManager {
     const child = this.spawnFn(definition.command, definition.args, {
       stdio: 'pipe',
       env: this.env,
+      cwd: definition.workingDirectory,
     });
 
     this.registry.update(definition.id, {
@@ -332,6 +333,7 @@ export class McpServerManager {
       current.command !== next.command ||
       current.description !== next.description ||
       current.enabled !== next.enabled ||
+      current.workingDirectory !== next.workingDirectory ||
       current.args.length !== next.args.length ||
       current.args.some((arg, index) => next.args[index] !== arg)
     );

@@ -24,6 +24,7 @@ type JsonRpcResponse = {
 };
 
 const latestProtocolVersion = '2025-06-18';
+const projectRoot = process.cwd();
 
 let telemetryEvents: unknown[] = [];
 
@@ -91,6 +92,7 @@ describe('McpCatalogService', () => {
             command: 'codex-tasks',
             args: ['mcp'],
             enabled: true,
+            workingDirectory: projectRoot,
           },
           status: 'running' as const,
           restarts: 0,
@@ -137,6 +139,7 @@ describe('McpCatalogService', () => {
             command: 'other',
             args: [],
             enabled: true,
+            workingDirectory: projectRoot,
           },
           status: 'running' as const,
           restarts: 0,
@@ -245,7 +248,13 @@ describe('McpCatalogService', () => {
       getRuntimeServers: jest.fn(() => [
         {
           id: 'warmup',
-          definition: { id: 'warmup', command: 'cmd', args: [], enabled: true },
+          definition: {
+            id: 'warmup',
+            command: 'cmd',
+            args: [],
+            enabled: true,
+            workingDirectory: projectRoot,
+          },
           status: 'running' as const,
           restarts: 0,
           pid: 42,
@@ -306,7 +315,13 @@ describe('McpCatalogService', () => {
         .mockReturnValue([
           {
             id: 'server-a',
-            definition: { id: 'server-a', command: 'cmd', args: [], enabled: true },
+            definition: {
+              id: 'server-a',
+              command: 'cmd',
+              args: [],
+              enabled: true,
+              workingDirectory: projectRoot,
+            },
             status: 'running' as const,
             restarts: 0,
             pid: 100,
@@ -352,7 +367,7 @@ describe('McpCatalogService', () => {
             tools: [
               {
                 name: 'Echo2',
-              inputSchema: { type: 'object', properties: {} },
+                inputSchema: { type: 'object', properties: {} },
               },
             ],
           },
@@ -365,7 +380,13 @@ describe('McpCatalogService', () => {
     manager.getRuntimeServers.mockReturnValueOnce([
       {
         id: 'server-a',
-        definition: { id: 'server-a', command: 'cmd', args: [], enabled: true },
+        definition: {
+          id: 'server-a',
+          command: 'cmd',
+          args: [],
+          enabled: true,
+          workingDirectory: projectRoot,
+        },
         status: 'running' as const,
         restarts: 0,
         pid: 101,
@@ -407,7 +428,13 @@ describe('McpCatalogService', () => {
       getRuntimeServers: jest.fn().mockReturnValue([
         {
           id: 'server-a',
-          definition: { id: 'server-a', command: 'cmd', args: [], enabled: true },
+          definition: {
+            id: 'server-a',
+            command: 'cmd',
+            args: [],
+            enabled: true,
+            workingDirectory: projectRoot,
+          },
           status: 'running' as const,
           restarts: 0,
           pid: 1,
