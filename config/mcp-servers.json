@@ -4,7 +4,14 @@
       "id": "codex-tasks",
       "command": "codex-tasks",
       "args": ["mcp"],
-      "description": "Seed MCP server for Codex Tasks workflow",
+      "description": "Codex Tasks workflow",
+      "enabled": true
+    },
+    {
+      "id": "filesystem",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "Filesystem access",
       "enabled": true
     }
   ]

@@ -190,6 +190,43 @@ describe('McpInvocationService', () => {
     ).toBe(true);
   });
 
+  it('returns content responses when structuredContent is absent', async () => {
+    const responseContent = [{ type: 'text', text: 'hello' }];
+    const client = {
+      callTool: jest.fn().mockResolvedValue({
+        content: responseContent,
+        isError: false,
+      }),
+    };
+
+    const clientPool: Partial<McpClientPool> = {
+      getClient: jest.fn().mockResolvedValue(client),
+    };
+
+    const { service } = createService({ clientPool });
+
+    const outcome = await service.invoke(
+      {
+        toolId: 'server-a:tool-x',
+        input: {},
+      },
+      handler,
+    );
+
+    expect(outcome.status).toBe('success');
+    expect(outcome.result).toEqual(responseContent);
+
+    const outputEvent = events.find(
+      (event) => event.type === 'output',
+    ) as { type: string; content?: unknown } | undefined;
+    expect(outputEvent?.content).toEqual(responseContent);
+
+    const completedEvent = events.find(
+      (event) => event.type === 'completed',
+    ) as { type: string; content?: unknown } | undefined;
+    expect(completedEvent?.content).toEqual(responseContent);
+  });
+
   it('fails when permissions missing', async () => {
     const catalog: Partial<McpCatalogService> = {
       getCatalog: jest.fn().mockResolvedValue({

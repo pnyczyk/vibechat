@@ -291,18 +291,25 @@ export class McpInvocationService {
       }
 
       const durationMs = this.now() - startedAt;
+      const streamedContent =
+        result.output ??
+        result.formatted ??
+        result.structuredContent ??
+        result.content ??
+        null;
+      const completionContent =
+        result.output ?? result.formatted ?? result.content ?? null;
       handlers.onEvent?.({
         type: 'output',
         invocationId,
-        content:
-          result.output ?? result.formatted ?? result.structuredContent ?? null,
+        content: streamedContent,
         isError: false,
       });
       handlers.onEvent?.({
         type: 'completed',
         invocationId,
         durationMs,
-        content: result.output ?? result.formatted ?? null,
+        content: completionContent,
         structuredContent: result.structuredContent ?? null,
       });
       recordInvocation({
@@ -320,7 +327,7 @@ export class McpInvocationService {
         status: 'success',
         invocationId,
         durationMs,
-        result: result.output ?? result.formatted ?? null,
+        result: completionContent,
         structuredContent: result.structuredContent ?? null,
       };
     } catch (error) {
