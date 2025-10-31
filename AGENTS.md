@@ -145,6 +145,15 @@ Store the prompts under `~/.codex/prompts/` so `/prompts:sdd-*` commands can ref
 ### Other
 - Instrument key voice/chat flows with telemetry for future tuning
 
+## MCP Tools
+
+- Server side catalog aggregation lives in `app/lib/mcp/catalog-service.ts`; it bootstraps the shared `McpServerManager` and caches descriptors for 5 seconds while filtering revoked tools through `McpToolPolicy`.
+- Tool invocation requests flow through `app/lib/mcp/invocation-service.ts` and the `POST /api/mcp/invoke` route where payloads are schema-checked, latency is logged, and streaming updates emit SSE frames back to the client. Telemetry events are recorded for every outcome.
+- Admin automation runs via `POST /api/mcp/admin` supporting `revoke`, `restore`, and `reload-config`; requests must include `Authorization: Bearer $MCP_ADMIN_TOKEN` and will cancel in-flight invocations plus invalidate the catalog cache.
+- Client hydration is handled by `McpAdapter` in `app/lib/voice-agent/mcp-adapter.ts`. The adapter fetches the catalog on session attach, pushes hosted MCP tool definitions into the realtime session, listens for `mcp_tool_call` transport events, and mirrors progress into UI state.
+- Voice UI renders tool availability and run progress inside `ChatClient` with the `data-testid="mcp-tool-summary"` and `data-testid="mcp-tool-runs"` markers to simplify Playwright assertions.
+- Integration & regression coverage: Jest unit tests under `tests/mcp/` cover config reloads, policy handling, adapter orchestration, and API routes; the Playwright spec `tests/e2e/mcp-tools.spec.ts` validates handshake and an end-to-end invocation in the browser.
+
 ## SDD Workflow
 
 This project uses Spec-Driven Development (SDD). See sdd/README.md for full workflow guide.

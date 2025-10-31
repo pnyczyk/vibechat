@@ -5,7 +5,10 @@ import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { PassThrough } from 'node:stream';
 
 import { McpCatalogService } from '@/app/lib/mcp/catalog-service';
+import type { McpClientPool } from '@/app/lib/mcp/client-pool';
 import type { McpServerManager } from '@/app/lib/mcp/serverManager';
+import { McpToolPolicy } from '@/app/lib/mcp/tool-policy';
+import { setMcpTelemetryHandlerForTesting } from '@/app/lib/mcp/telemetry';
 
 type JsonRpcRequest = {
   jsonrpc: '2.0';
@@ -22,6 +25,21 @@ type JsonRpcResponse = {
 };
 
 const latestProtocolVersion = '2025-06-18';
+const projectRoot = process.cwd();
+
+let telemetryEvents: unknown[] = [];
+
+beforeEach(() => {
+  telemetryEvents = [];
+  setMcpTelemetryHandlerForTesting((event) => {
+    telemetryEvents.push(event);
+  });
+});
+
+afterEach(() => {
+  setMcpTelemetryHandlerForTesting(null);
+  jest.clearAllMocks();
+});
 
 const createRpcProcess = (
   handlers: Record<string, (request: JsonRpcRequest) => JsonRpcResponse | void>,
@@ -75,6 +93,7 @@ describe('McpCatalogService', () => {
             command: 'codex-tasks',
             args: ['mcp'],
             enabled: true,
+            workingDirectory: projectRoot,
           },
           status: 'running' as const,
           restarts: 0,
@@ -121,6 +140,7 @@ describe('McpCatalogService', () => {
             command: 'other',
             args: [],
             enabled: true,
+            workingDirectory: projectRoot,
           },
           status: 'running' as const,
           restarts: 0,
@@ -180,6 +200,160 @@ describe('McpCatalogService', () => {
         }),
       ]),
     );
+    expect(
+      telemetryEvents.find(
+        (event) =>
+          typeof event === 'object' &&
+          event !== null &&
+          (event as { type?: string }).type === 'catalog_handshake',
+      ),
+    ).toBeDefined();
+  });
+
+  it('continues collecting tools when a server connection fails', async () => {
+    const manager = {
+      start: jest.fn().mockResolvedValue(undefined),
+      getRuntimeServers: jest.fn(() => [
+        {
+          id: 'server-a',
+          definition: {
+            id: 'server-a',
+            command: 'codex-tasks',
+            args: ['mcp'],
+            enabled: true,
+            workingDirectory: projectRoot,
+          },
+          status: 'running' as const,
+          restarts: 0,
+          pid: 111,
+          process: createRpcProcess({}, { pid: 111 }),
+        },
+        {
+          id: 'server-b',
+          definition: {
+            id: 'server-b',
+            command: 'other',
+            args: [],
+            enabled: true,
+            workingDirectory: projectRoot,
+          },
+          status: 'running' as const,
+          restarts: 0,
+          pid: 222,
+          process: createRpcProcess({}, { pid: 222 }),
+        },
+      ]),
+    } as unknown as McpServerManager;
+
+    const clientPool = {
+      getClient: jest.fn(async (definition) => {
+        if (definition.id === 'server-a') {
+          throw new Error('connection failed');
+        }
+        return {
+          listTools: jest.fn().mockResolvedValueOnce({
+            tools: [
+              {
+                name: 'Translate',
+                inputSchema: { type: 'object', properties: {} },
+              },
+            ],
+            nextCursor: null,
+          }),
+        };
+      }),
+      invalidate: jest.fn(),
+    } as unknown as McpClientPool;
+
+    const service = new McpCatalogService({
+      manager,
+      clientPool,
+      requestTimeoutMs: 100,
+    });
+
+    const result = await service.getCatalog();
+
+    expect(result.tools).toEqual([
+      expect.objectContaining({
+        id: 'server-b:Translate',
+        name: 'Translate',
+      }),
+    ]);
+    expect(clientPool.getClient).toHaveBeenCalledTimes(2);
+    expect(clientPool.invalidate).toHaveBeenCalledWith('server-a');
+  });
+
+  it('waits for MCP servers to expose tools during startup before returning catalog', async () => {
+    let listCalls = 0;
+    const process = createRpcProcess({
+      initialize: (request) => ({
+        jsonrpc: '2.0',
+        id: request.id ?? null,
+        result: {
+          protocolVersion: latestProtocolVersion,
+          capabilities: { tools: {} },
+          serverInfo: { name: 'warmup', version: '1.0.0' },
+        },
+      }),
+      'notifications/initialized': () => undefined,
+      'tools/list': (request) => {
+        listCalls += 1;
+        return {
+          jsonrpc: '2.0',
+          id: request.id ?? null,
+          result: {
+            tools:
+              listCalls < 2
+                ? []
+                : [
+                    {
+                      name: 'Stabilize',
+                      description: 'becomes available after warmup',
+                      inputSchema: { type: 'object', properties: {} },
+                    },
+                  ],
+          },
+        };
+      },
+    });
+
+    const manager = {
+      start: jest.fn().mockResolvedValue(undefined),
+      getRuntimeServers: jest.fn(() => [
+        {
+          id: 'warmup',
+          definition: {
+            id: 'warmup',
+            command: 'cmd',
+            args: [],
+            enabled: true,
+            workingDirectory: projectRoot,
+          },
+          status: 'running' as const,
+          restarts: 0,
+          pid: 42,
+          process,
+        },
+      ]),
+    } as unknown as McpServerManager;
+
+    const service = new McpCatalogService({
+      manager,
+      requestTimeoutMs: 100,
+      startupTimeoutMs: 500,
+      startupPollIntervalMs: 10,
+    });
+
+    const result = await service.getCatalog();
+
+    expect(manager.start).toHaveBeenCalledTimes(1);
+    expect(listCalls).toBeGreaterThanOrEqual(2);
+    expect(result.tools).toEqual([
+      expect.objectContaining({
+        id: 'warmup:Stabilize',
+        name: 'Stabilize',
+      }),
+    ]);
   });
 
   it('caches catalog responses within TTL and refreshes after expiry', async () => {
@@ -215,7 +389,13 @@ describe('McpCatalogService', () => {
         .mockReturnValue([
           {
             id: 'server-a',
-            definition: { id: 'server-a', command: 'cmd', args: [], enabled: true },
+            definition: {
+              id: 'server-a',
+              command: 'cmd',
+              args: [],
+              enabled: true,
+              workingDirectory: projectRoot,
+            },
             status: 'running' as const,
             restarts: 0,
             pid: 100,
@@ -261,7 +441,7 @@ describe('McpCatalogService', () => {
             tools: [
               {
                 name: 'Echo2',
-              inputSchema: { type: 'object', properties: {} },
+                inputSchema: { type: 'object', properties: {} },
               },
             ],
           },
@@ -274,7 +454,13 @@ describe('McpCatalogService', () => {
     manager.getRuntimeServers.mockReturnValueOnce([
       {
         id: 'server-a',
-        definition: { id: 'server-a', command: 'cmd', args: [], enabled: true },
+        definition: {
+          id: 'server-a',
+          command: 'cmd',
+          args: [],
+          enabled: true,
+          workingDirectory: projectRoot,
+        },
         status: 'running' as const,
         restarts: 0,
         pid: 101,
@@ -285,6 +471,64 @@ describe('McpCatalogService', () => {
     const third = await service.getCatalog();
     expect(third.tools[0].name).toBe('Echo2');
     expect(manager.getRuntimeServers).toHaveBeenCalledTimes(2);
+  });
+
+  it('excludes revoked tools from catalog results', async () => {
+    const process = createRpcProcess({
+      initialize: (request) => ({
+        jsonrpc: '2.0',
+        id: request.id ?? null,
+        result: {
+          protocolVersion: latestProtocolVersion,
+          capabilities: { tools: {} },
+          serverInfo: { name: 'mock', version: '1.0.0' },
+        },
+      }),
+      'notifications/initialized': () => undefined,
+      'tools/list': (request) => ({
+        jsonrpc: '2.0',
+        id: request.id ?? null,
+        result: {
+          tools: [
+            { name: 'Keep', inputSchema: { type: 'object', properties: {} } },
+            { name: 'Drop', inputSchema: { type: 'object', properties: {} } },
+          ],
+        },
+      }),
+    });
+
+    const manager = {
+      start: jest.fn().mockResolvedValue(undefined),
+      getRuntimeServers: jest.fn().mockReturnValue([
+        {
+          id: 'server-a',
+          definition: {
+            id: 'server-a',
+            command: 'cmd',
+            args: [],
+            enabled: true,
+            workingDirectory: projectRoot,
+          },
+          status: 'running' as const,
+          restarts: 0,
+          pid: 1,
+          process,
+        },
+      ]),
+    } as unknown as McpServerManager;
+
+    const policy = new McpToolPolicy();
+    policy.revoke(['server-a:Drop']);
+
+    const service = new McpCatalogService({
+      manager,
+      policy,
+      requestTimeoutMs: 100,
+    });
+
+    const result = await service.getCatalog();
+    expect(result.tools).toHaveLength(1);
+    expect(result.tools[0].id).toBe('server-a:Keep');
   });
 
   it('logs and recovers when tools/list times out', async () => {
@@ -324,6 +568,8 @@ describe('McpCatalogService', () => {
       manager,
       requestTimeoutMs: 50,
       logger: { warn },
+      startupTimeoutMs: 100,
+      startupPollIntervalMs: 10,
     });
 
     const result = await service.getCatalog();

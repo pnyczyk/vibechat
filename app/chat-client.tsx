@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Typography from "@mui/material/Typography";
-import { RealtimeAgent, RealtimeSession } from "@openai/agents/realtime";
+import { RealtimeAgent, RealtimeSession, tool as createAgentTool } from "@openai/agents/realtime";
 import dynamic from "next/dynamic";
 import styles from "./chat-client.module.css";
 
@@ -10,6 +10,11 @@ import { SessionControls, SessionFeedback, ConnectionStatus } from "./components
 import { EntryOverlay } from "./components/EntryOverlay";
 import type { TranscriptDrawerProps } from "./components/TranscriptDrawer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
+import {
+  McpAdapter,
+  type McpToolSummary,
+  type ToolRunState,
+} from "./lib/voice-agent/mcp-adapter";
 import { logTelemetry, type TelemetryTransport } from "./lib/analytics";
 import { createRealtimeSession } from "./lib/realtime-session-factory";
 import { useThemeController } from "./providers";
@@ -43,6 +48,12 @@ const clampLevel = (value: number) => {
   return Math.max(0, Math.min(1, value));
 };
 
+const defaultToolParameters: Record<string, unknown> = Object.freeze({
+  type: "object",
+  properties: {},
+  additionalProperties: true,
+});
+
 export function ChatClient() {
   const { mode: themeMode, toggle: toggleTheme } = useThemeController();
   const [status, setStatus] = useState<ConnectionStatus>("idle");
@@ -51,6 +62,8 @@ export function ChatClient() {
   const [muted, setMuted] = useState(false);
   const [session, setSession] = useState<RealtimeSession | null>(null);
   const transcriptStore = useMemo(() => new TranscriptStore(), []);
+  const mcpAdapter = useMemo(() => new McpAdapter(), []);
+  const [agent, setAgent] = useState<RealtimeAgent | null>(null);
   const [voiceActivity, setVoiceActivity] = useState<VoiceActivityState>(
     defaultVoiceActivityState,
   );
@@ -58,6 +71,9 @@ export function ChatClient() {
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
   const [isTranscriptReady, setIsTranscriptReady] = useState(false);
   const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [toolRuns, setToolRuns] = useState<ToolRunState[]>([]);
+  const [mcpTools, setMcpTools] = useState<McpToolSummary[]>([]);
+  const [toolsInitialized, setToolsInitialized] = useState(false);
   const entryStartRef = useRef<number | null>(null);
   const entryTimestampRef = useRef<string | null>(null);
   const voiceStateRef = useRef<"waiting" | "idle" | "active">("waiting");
@@ -74,6 +90,97 @@ export function ChatClient() {
   })[0];
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserCleanupRef = useRef<(() => void) | null>(null);
+
+  const agentTools = useMemo(
+    () =>
+      mcpTools.map((toolSummary) => {
+        const parameters =
+          toolSummary.inputSchema && Object.keys(toolSummary.inputSchema).length > 0
+            ? toolSummary.inputSchema
+            : defaultToolParameters;
+
+        const execute = async (args: unknown) => {
+          try {
+            return await mcpAdapter.runTool(toolSummary.id, args);
+          } catch (error) {
+            console.warn("[mcp-adapter] tool execution failed", {
+              tool: toolSummary.name,
+              error,
+            });
+            throw error;
+          }
+        };
+
+        const realtimeTool = createAgentTool({
+          name: toolSummary.name,
+          description: toolSummary.description ?? "",
+          parameters,
+          async execute(input) {
+            return execute(input);
+          },
+        });
+
+        const originalInvoke = realtimeTool.invoke.bind(realtimeTool);
+
+        Object.defineProperty(realtimeTool, "execute", {
+          value: execute,
+          enumerable: true,
+          configurable: true,
+        });
+
+        Object.defineProperty(realtimeTool, "parameters", {
+          value: parameters,
+          enumerable: true,
+          configurable: true,
+        });
+
+        Object.defineProperty(realtimeTool, "invoke", {
+          value: originalInvoke,
+          enumerable: false,
+          configurable: true,
+          writable: true,
+        });
+
+        return realtimeTool;
+      }),
+    [mcpAdapter, mcpTools],
+  );
+
+  useEffect(() => {
+    if (!toolsInitialized) {
+      return;
+    }
+
+    const baseConfig = {
+      name: "Assistant",
+      instructions: "You are a helpful assistant that coordinates multiple background tasks."
+        + "When asked to do anything more complex than a very simple question start a new task, wait for it to finish and report the result."
+        + "When listing tasks to user don't provide any internal ids or metadata, only the task name, unless user specifically asks for it."
+        + "Reuse existing tasks where possible by sending a message, instead of starting new ones. This depends on the directory (project) that the task is associated with."
+    };
+
+    const config =
+      agentTools.length > 0
+        ? { ...baseConfig, tools: agentTools }
+        : baseConfig;
+
+    const debugConfig =
+      agentTools.length > 0
+        ? {
+            ...baseConfig,
+            tools: agentTools.map((tool) => ({
+              type: tool.type,
+              name: tool.name,
+              description: tool.description,
+              parameters: (tool as unknown as { parameters: unknown }).parameters,
+              execute: (tool as unknown as { execute?: unknown }).execute,
+            })),
+          }
+        : baseConfig;
+
+    console.log("[chat-client] initializing agent with config", debugConfig);
+    setAgent(new RealtimeAgent(config));
+  }, [agentTools, toolsInitialized]);
 
   useEffect(() => {
     return () => {
@@ -93,6 +200,44 @@ export function ChatClient() {
   }, [session]);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await mcpAdapter.refreshCatalog();
+      } catch (error) {
+        if (!cancelled) {
+          setToolsInitialized(true);
+        }
+        console.warn("[mcp-adapter] initial catalog load failed", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mcpAdapter]);
+
+  useEffect(() => {
+    if (!session) {
+      mcpAdapter.detach();
+      setToolRuns([]);
+      return;
+    }
+
+    void (async () => {
+      try {
+        await mcpAdapter.attach(session);
+      } catch (error) {
+        console.warn('[mcp-adapter] failed to attach', error);
+      }
+    })();
+
+    return () => {
+      mcpAdapter.detach();
+    };
+  }, [session, mcpAdapter]);
+
+  useEffect(() => {
     transcriptStore.setSession(session);
 
     return () => {
@@ -107,6 +252,49 @@ export function ChatClient() {
 
     return unsubscribe;
   }, [transcriptStore]);
+
+  useEffect(() => {
+    const unsubscribe = mcpAdapter.subscribe((event) => {
+      if (event.type === "tools-changed") {
+        setMcpTools(event.tools);
+        setToolsInitialized(true);
+        return;
+      }
+
+      if (event.type === "run-updated") {
+        setToolRuns((prev) => {
+          const next = [...prev];
+          const index = next.findIndex((run) => run.runId === event.run.runId);
+          const copy = { ...event.run };
+          if (index === -1) {
+            next.push(copy);
+          } else {
+            next[index] = copy;
+          }
+          return next;
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [mcpAdapter]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const globalWindow = window as typeof window & {
+      __vibeMcpAdapter?: McpAdapter;
+    };
+    globalWindow.__vibeMcpAdapter = mcpAdapter;
+
+    return () => {
+      if (globalWindow.__vibeMcpAdapter === mcpAdapter) {
+        delete globalWindow.__vibeMcpAdapter;
+      }
+    };
+  }, [mcpAdapter]);
 
   useEffect(() => {
     return () => {
@@ -178,15 +366,16 @@ export function ChatClient() {
     }
   }, [voiceActivity]);
 
-  const agent = useMemo(() => {
-    return new RealtimeAgent({
-      name: "Assistant",
-      instructions: "Mów po polsku i odpowiadaj głosem. Bądź serdeczny.",
-    });
-  }, []);
-
   const handleConnect = useCallback(async () => {
     if (status === "connecting" || status === "connected") {
+      return;
+    }
+
+    if (!agent) {
+      setFeedback({
+        message: "Trwa przygotowywanie narzędzi MCP, spróbuj ponownie za chwilę",
+        severity: "error",
+      });
       return;
     }
 
@@ -289,12 +478,14 @@ export function ChatClient() {
     setFeedback({ message: "Disconnected from session", severity: "success" });
     setVoiceActivity(defaultVoiceActivityState);
     setIsTranscriptOpen(false);
+    setToolRuns([]);
+    mcpAdapter.detach();
     voiceStateRef.current = "waiting";
     entryStartRef.current = null;
     entryTimestampRef.current = null;
     logTelemetry("voice_activity_transition", { state: "waiting", hasMetrics: false });
     logTelemetry("session_disconnect", { reason: "user" });
-  }, [session]);
+  }, [session, mcpAdapter]);
 
   const handleToggleMute = useCallback(() => {
     if (!session) {
@@ -571,6 +762,32 @@ export function ChatClient() {
             )}
           </div>
         </footer>
+        {mcpTools.length > 0 && (
+          <div
+            className={styles.toolSummary}
+            data-testid="mcp-tool-summary"
+          >
+            MCP tools ready: {mcpTools.length}
+          </div>
+        )}
+        {toolRuns.length > 0 && (
+          <div
+            className={styles.toolRuns}
+            data-testid="mcp-tool-runs"
+            title={mcpTools.map((tool) => tool.name).join(", ")}
+          >
+            {toolRuns.slice(-3).map((run) => (
+              <div
+                key={run.runId}
+                className={styles.toolRun}
+                data-status={run.status}
+              >
+                <span className={styles.toolRunName}>{run.toolName}</span>
+                <span className={styles.toolRunMessage}>{run.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
 
       <aside className={styles.controlRail} aria-label="Session controls">

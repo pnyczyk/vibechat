@@ -74,6 +74,29 @@ function buildSessionMock(): SessionMock {
 
 let activeSession: SessionMock;
 
+function createFetchResponse(
+  overrides: Partial<Response & { json: jest.Mock; text: jest.Mock }> = {},
+) {
+  const defaultJson = jest.fn().mockResolvedValue({
+    tools: [],
+    collectedAt: Date.now(),
+  });
+  const defaultText = jest.fn().mockResolvedValue('');
+  const defaultBody = {
+    getReader: () => ({
+      read: jest.fn().mockResolvedValue({ done: true, value: undefined }),
+    }),
+  };
+  return {
+    ok: true,
+    status: 200,
+    json: defaultJson,
+    text: defaultText,
+    body: defaultBody as unknown as ReadableStream<Uint8Array>,
+    ...overrides,
+  } as Response;
+}
+
 beforeAll(() => {
   global.fetch = jest.fn();
 });
@@ -82,6 +105,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   activeSession = buildSessionMock();
   (global.fetch as jest.Mock).mockReset();
+  (global.fetch as jest.Mock).mockImplementation(() =>
+    Promise.resolve(createFetchResponse()),
+  );
 
   mockedCreateSession.mockImplementation(() => ({
     session: activeSession,
@@ -152,11 +178,18 @@ describe("ChatClient telemetry", () => {
       requiresToken: true,
     }));
 
-    const errorResponse = {
-      ok: false,
-      json: jest.fn().mockResolvedValue({ error: "forbidden" }),
-    } as unknown as Response;
-    (global.fetch as jest.Mock).mockResolvedValueOnce(errorResponse);
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementationOnce(() => Promise.resolve(createFetchResponse()));
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(
+        createFetchResponse({
+          ok: false,
+          status: 403,
+          json: jest.fn().mockResolvedValue({ error: "forbidden" }),
+          text: jest.fn().mockResolvedValue("forbidden"),
+        }),
+      ),
+    );
 
     renderClient();
 

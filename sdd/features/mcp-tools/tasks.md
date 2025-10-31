@@ -47,7 +47,7 @@ Create a server manager that spawns configured MCP servers over stdio, monitors 
 ---
 
 ## Task T003: Aggregate MCP Tool Catalog
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002
 **Files:**
 - `app/lib/mcp/catalog-service.ts`
@@ -69,7 +69,7 @@ Query all running MCP servers for their tool metadata and expose a unified catal
 ---
 
 ## Task T004: Hydrate Client Agent With Catalog
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T003
 **Files:**
 - `app/lib/voice-agent/mcp-adapter.ts`
@@ -91,7 +91,7 @@ Integrate the unified catalog into the client voice agent so tools register on s
 ---
 
 ## Task T005: Implement Tool Invocation Pipeline
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002
 **Files:**
 - `app/lib/mcp/invocation-service.ts`
@@ -116,9 +116,9 @@ Handle tool invocation requests from the agent, forward them to the correct MCP 
 **Status:** Pending
 **Dependencies:** T004, T005
 **Files:**
-- `app/lib/voice-agent/tool-runner.ts`
-- `app/components/voice-session-hooks.ts`
-- `tests/chat/mcp-invocation.test.tsx`
+- `app/lib/voice-agent/mcp-adapter.ts`
+- `app/chat-client.tsx`
+- `tests/chat/mcp-banner.test.tsx`
 
 ### Description
 Wire the voice agent to call the invocation endpoint, process streamed responses, and present outputs while respecting session permissions.
@@ -135,12 +135,14 @@ Wire the voice agent to call the invocation endpoint, process streamed responses
 ---
 
 ## Task T007: Instrument Telemetry And Logging
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T005
 **Files:**
-- `app/lib/analytics.ts`
 - `app/lib/mcp/telemetry.ts`
-- `tests/mcp/telemetry.test.ts`
+- `app/lib/mcp/catalog-service.ts`
+- `app/lib/mcp/invocation-service.ts`
+- `tests/mcp/catalog-service.test.ts`
+- `tests/mcp/invocation-service.test.ts`
 
 ### Description
 Capture handshake, invocation latency, and outcome metrics while forwarding them to analytics with correlation ids for support diagnostics.
@@ -157,7 +159,7 @@ Capture handshake, invocation latency, and outcome metrics while forwarding them
 ---
 
 ## Task T008: Provide Kill Switch And Config Reload
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002, T005
 **Files:**
 - `app/api/mcp/admin/route.ts`
@@ -179,12 +181,13 @@ Expose administrative controls to revoke tools mid-session, cancel active invoca
 ---
 
 ## Task T009: End-to-End Validation And Documentation
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T004, T006, T007, T008
 **Files:**
 - `tests/e2e/mcp-tools.spec.ts`
 - `AGENTS.md`
 - `README.md`
+- `sdd/features.md`
 
 ### Description
 Add Playwright coverage for catalog download and invocation flows, verify telemetry toggles, and document MCP configuration plus operational runbooks.

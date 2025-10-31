@@ -9,6 +9,14 @@ This document tracks all planned features for vibechat.
 
 ---
 
+### [ ] mcp-tools
+Integrate Model Context Protocol tooling into the voice agent including catalog hydration, invocation pipeline, telemetry, admin controls, and E2E coverage.
+- **Priority:** High
+- **Dependencies:** ui-overhaul
+- **Notes:** Tasks T001–T002 completed previously; T003–T009 implemented on branch `feat/45-50-mcp-integration` pending review.
+
+---
+
 ## Features
 
 ### [x] ui-overhaul
