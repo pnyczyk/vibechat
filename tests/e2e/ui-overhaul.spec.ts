@@ -12,7 +12,9 @@ test.describe("UI Overhaul critical path", () => {
 
     await entryButton.click();
 
-    await expect(page.getByText(/status: connected/i)).toBeVisible();
+    await expect(page.getByTestId("session-feedback")).toContainText(
+      /connected to session/i,
+    );
     await expect(
       page.getByTestId("voice-activity-indicator"),
     ).toHaveAttribute("aria-label", /ai is speaking/i, { timeout: 7_500 });

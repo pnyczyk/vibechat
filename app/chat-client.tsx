@@ -77,6 +77,8 @@ export function ChatClient() {
   const entryStartRef = useRef<number | null>(null);
   const entryTimestampRef = useRef<string | null>(null);
   const voiceStateRef = useRef<"waiting" | "idle" | "active">("waiting");
+  const statusRef = useRef<ConnectionStatus>("idle");
+  statusRef.current = status;
   const audioElement = useState(() => {
     if (typeof window === "undefined") {
       return null;
@@ -254,10 +256,21 @@ export function ChatClient() {
   }, [transcriptStore]);
 
   useEffect(() => {
+    let isFirstSync = true;
     const unsubscribe = mcpAdapter.subscribe((event) => {
       if (event.type === "tools-changed") {
         setMcpTools(event.tools);
         setToolsInitialized(true);
+        const toolCount = event.tools.length;
+        const shouldAnnounce =
+          (!isFirstSync || toolCount > 0) && statusRef.current !== "connected";
+        if (shouldAnnounce) {
+          setFeedback({
+            message: `Found ${toolCount} MCP tools`,
+            severity: "success",
+          });
+        }
+        isFirstSync = false;
         return;
       }
 
@@ -735,41 +748,10 @@ export function ChatClient() {
           >
             VibeChat
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Connect to start a realtime voice session or explore the workspace
-            while we prepare new modules.
-          </Typography>
         </header>
 
-        <div className={styles.surface} role="presentation">
-          <Typography variant="body2" color="text.secondary">
-            Voice interaction canvas reserved for upcoming live session
-            visualization.
-          </Typography>
-        </div>
+        <div className={styles.surface} role="presentation" />
 
-        <footer className={styles.status} aria-live="polite">
-          <div className={styles.statusText}>
-            <Typography variant="body2">Status: {status}</Typography>
-            {error ? (
-              <Typography variant="body2" color="error">
-                Error: {error}
-              </Typography>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                Allow microphone access when prompted to keep the session ready.
-              </Typography>
-            )}
-          </div>
-        </footer>
-        {mcpTools.length > 0 && (
-          <div
-            className={styles.toolSummary}
-            data-testid="mcp-tool-summary"
-          >
-            MCP tools ready: {mcpTools.length}
-          </div>
-        )}
         {toolRuns.length > 0 && (
           <div
             className={styles.toolRuns}

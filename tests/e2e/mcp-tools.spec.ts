@@ -38,7 +38,8 @@ test('MCP catalog handshake and tool invocation flow', async ({ page }) => {
 
   await page.goto('/');
 
-  await expect(page.getByTestId('mcp-tool-summary')).toHaveText(/MCP tools ready: 1/);
+  await expect(page.getByTestId('mcp-tool-summary')).toHaveCount(0);
+  await expect(page.getByTestId('session-feedback')).toContainText(/Found 1 MCP tools/i);
 
   await page.evaluate(() => {
     const adapter = (window as unknown as {
