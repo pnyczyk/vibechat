@@ -69,11 +69,26 @@ export interface McpAdapterOptions {
 }
 
 const defaultCatalogFetcher: CatalogFetcher = async () => {
-  const response = await fetch('/api/mcp/catalog', { cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`Failed to load catalog (${response.status})`);
+  let response: Response | undefined;
+  try {
+    response = (await fetch('/api/mcp/catalog', {
+      cache: 'no-store',
+    })) as Response;
+  } catch (error) {
+    console.debug('[mcp-adapter] catalog fetch failed', error);
+    response = undefined;
   }
-  return response.json();
+
+  if (!response || typeof (response as Response).ok !== 'boolean') {
+    throw new Error('Failed to load catalog (no response)');
+  }
+
+  const typed = response as Response;
+  if (!typed.ok) {
+    throw new Error(`Failed to load catalog (${typed.status})`);
+  }
+
+  return typed.json();
 };
 
 const defaultInvoker: ToolInvoker = async ({
@@ -84,27 +99,40 @@ const defaultInvoker: ToolInvoker = async ({
   grantedPermissions,
 }) => {
   const controller = new AbortController();
-  const response = await fetch('/api/mcp/invoke', {
-    method: 'POST',
-    body: JSON.stringify({
-      invocationId,
-      toolId,
-      input: payload,
-      grantedPermissions,
-    }),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    signal: controller.signal,
-  });
+  let response: Response | undefined;
+  try {
+    response = (await fetch('/api/mcp/invoke', {
+      method: 'POST',
+      body: JSON.stringify({
+        invocationId,
+        toolId,
+        input: payload,
+        grantedPermissions,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    })) as Response;
+  } catch (error) {
+    console.debug('[mcp-adapter] invocation fetch failed', error);
+    response = undefined;
+  }
 
-  if (!response.ok || !response.body) {
-    const error = await response.text();
+  if (
+    !response ||
+    typeof (response as Response).ok !== 'boolean' ||
+    !(response as Response).ok ||
+    !(response as Response).body
+  ) {
+    const typed = response as Response | undefined;
+    const error = typed ? await typed.text() : '';
     onEvent({ type: 'failed', message: error || 'Invocation failed' });
     return;
   }
 
-  const reader = response.body.getReader();
+  const typed = response as Response;
+  const reader = typed.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
 
