@@ -5,6 +5,7 @@ import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { PassThrough } from 'node:stream';
 
 import { McpCatalogService } from '@/app/lib/mcp/catalog-service';
+import type { McpClientPool } from '@/app/lib/mcp/client-pool';
 import type { McpServerManager } from '@/app/lib/mcp/serverManager';
 import { McpToolPolicy } from '@/app/lib/mcp/tool-policy';
 import { setMcpTelemetryHandlerForTesting } from '@/app/lib/mcp/telemetry';
@@ -207,6 +208,79 @@ describe('McpCatalogService', () => {
           (event as { type?: string }).type === 'catalog_handshake',
       ),
     ).toBeDefined();
+  });
+
+  it('continues collecting tools when a server connection fails', async () => {
+    const manager = {
+      start: jest.fn().mockResolvedValue(undefined),
+      getRuntimeServers: jest.fn(() => [
+        {
+          id: 'server-a',
+          definition: {
+            id: 'server-a',
+            command: 'codex-tasks',
+            args: ['mcp'],
+            enabled: true,
+            workingDirectory: projectRoot,
+          },
+          status: 'running' as const,
+          restarts: 0,
+          pid: 111,
+          process: createRpcProcess({}, { pid: 111 }),
+        },
+        {
+          id: 'server-b',
+          definition: {
+            id: 'server-b',
+            command: 'other',
+            args: [],
+            enabled: true,
+            workingDirectory: projectRoot,
+          },
+          status: 'running' as const,
+          restarts: 0,
+          pid: 222,
+          process: createRpcProcess({}, { pid: 222 }),
+        },
+      ]),
+    } as unknown as McpServerManager;
+
+    const clientPool = {
+      getClient: jest.fn(async (definition) => {
+        if (definition.id === 'server-a') {
+          throw new Error('connection failed');
+        }
+        return {
+          listTools: jest.fn().mockResolvedValueOnce({
+            tools: [
+              {
+                name: 'Translate',
+                inputSchema: { type: 'object', properties: {} },
+              },
+            ],
+            nextCursor: null,
+          }),
+        };
+      }),
+      invalidate: jest.fn(),
+    } as unknown as McpClientPool;
+
+    const service = new McpCatalogService({
+      manager,
+      clientPool,
+      requestTimeoutMs: 100,
+    });
+
+    const result = await service.getCatalog();
+
+    expect(result.tools).toEqual([
+      expect.objectContaining({
+        id: 'server-b:Translate',
+        name: 'Translate',
+      }),
+    ]);
+    expect(clientPool.getClient).toHaveBeenCalledTimes(2);
+    expect(clientPool.invalidate).toHaveBeenCalledWith('server-a');
   });
 
   it('waits for MCP servers to expose tools during startup before returning catalog', async () => {

@@ -39,7 +39,7 @@ export interface McpCatalogServiceOptions {
 }
 
 const DEFAULT_CACHE_TTL = 5_000;
-const DEFAULT_REQUEST_TIMEOUT = 400;
+const DEFAULT_REQUEST_TIMEOUT = 2_000;
 const DEFAULT_STARTUP_TIMEOUT_MS = 5_000;
 const DEFAULT_STARTUP_POLL_INTERVAL_MS = 200;
 
@@ -191,11 +191,22 @@ export class McpCatalogService {
       return [];
     }
 
-    const client = await this.clientPool.getClient(
-      server.definition,
-      process,
-      server.pid ?? process.pid ?? undefined,
-    );
+    let client;
+    try {
+      client = await this.clientPool.getClient(
+        server.definition,
+        process,
+        server.pid ?? process.pid ?? undefined,
+      );
+    } catch (error) {
+      this.logger.warn?.(
+        `[mcp-catalog] failed to connect to "${server.definition.id}": ${String(
+          error,
+        )}`,
+      );
+      this.clientPool.invalidate(server.definition.id);
+      return [];
+    }
 
     try {
       const tools: McpToolDescriptor[] = [];
@@ -243,6 +254,7 @@ export class McpCatalogService {
           error,
         )}`,
       );
+      this.clientPool.invalidate(server.definition.id);
       return [];
     }
   }

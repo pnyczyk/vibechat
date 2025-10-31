@@ -13,7 +13,7 @@ let startPromise: Promise<void> | null = null;
 
 function createRuntime(): McpRuntime {
   const manager = new McpServerManager();
-  const clientPool = new McpClientPool({ requestTimeoutMs: 400 });
+  const clientPool = new McpClientPool({ requestTimeoutMs: 2_000 });
   const policy = new McpToolPolicy();
 
   return { manager, clientPool, policy };
