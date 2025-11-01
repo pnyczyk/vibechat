@@ -9,11 +9,11 @@ This document tracks all planned features for vibechat.
 
 ---
 
-### [ ] mcp-tools
+### [x] mcp-tools
 Integrate Model Context Protocol tooling into the voice agent including catalog hydration, invocation pipeline, telemetry, admin controls, and E2E coverage.
 - **Priority:** High
 - **Dependencies:** ui-overhaul
-- **Notes:** Tasks T001–T002 completed previously; T003–T009 implemented on branch `feat/45-50-mcp-integration` pending review.
+- **Notes:** Tasks T001–T009 landed on `main`; GH issues/PRs closed 2025-10-31 after verification.
 
 ---
 
@@ -27,11 +27,11 @@ Revamp chat interface for richer voice + text interactions
 
 ---
 
-### [ ] ui-streamlining-and-cleanup
+### [x] ui-streamlining-and-cleanup
 Refine the full-viewport chat canvas with lightning entry, minimalist controls, and theme flexibility
 - **Priority:** High
 - **Dependencies:** ui-overhaul
-- **Notes:** Tasks T001–T007 landed; telemetry, E2E refresh, and regression sweep remain
+- **Notes:** Tasks T001–T010 merged to `main`; final telemetry, docs, and regression sweep completed 2025-10-31.
 
 ---
 

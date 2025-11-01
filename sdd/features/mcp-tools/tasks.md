@@ -113,7 +113,7 @@ Handle tool invocation requests from the agent, forward them to the correct MCP 
 ---
 
 ## Task T006: Connect Voice Agent To MCP Invocations
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T004, T005
 **Files:**
 - `app/lib/voice-agent/mcp-adapter.ts`
@@ -131,6 +131,7 @@ Wire the voice agent to call the invocation endpoint, process streamed responses
 ### Implementation Notes
 - Reference spec Story 2
 - Ensure telemetry hooks can observe each invocation phase
+- Landed via PR #58 merged on 2025-10-30; telemetry validated in staging before closing.
 
 ---
 

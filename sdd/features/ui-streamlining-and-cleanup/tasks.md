@@ -187,7 +187,7 @@ Add an end-to-end scenario covering lightning entry, connect/disconnect flow, vo
 ---
 
 ## Task T009: Accessibility And Documentation Review
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002, T005
 **Files:**
 - `tests/chat/accessibility-streamlining.test.tsx`
@@ -205,11 +205,12 @@ Re-run automated accessibility audits after label removal, ensure aria support i
 ### Implementation Notes
 - Reference spec Stories 1 and 2
 - Coordinate with design to validate voice indicator opacity contrast thresholds
+- Closed via docs update + axe run recorded 2025-10-31; linked GH issue resolved.
 
 ---
 
 ## Task T010: Post-Refactor Regression Sweep
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T001, T002, T003, T004, T005, T008
 **Files:**
 - `tests/chat/regression-streamlining.test.tsx`
@@ -227,5 +228,6 @@ Consolidate final regression checks ensuring Jest, integration, and Playwright s
 ### Implementation Notes
 - Supports release readiness for the feature
 - Coordinate with telemetry owners to ensure metrics hooks fire in staging
+- Final Jest/Playwright coverage report archived 2025-10-31; GH issue closed same day.
 
 ---
