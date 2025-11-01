@@ -8,8 +8,12 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
+  transform: {
+    '^.+\\.(js|jsx|mjs|cjs)$': 'babel-jest',
+  },
   moduleDirectories: ['node_modules', '<rootDir>/'],
   testPathIgnorePatterns: ['<rootDir>/tests/e2e/'],
+  transformIgnorePatterns: [],
 };
 
 export default createJestConfig(customJestConfig);
