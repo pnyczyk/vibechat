@@ -79,14 +79,16 @@
 .surface {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   border-radius: 0;
   border: none;
   background: transparent;
   color: inherit;
-  text-align: center;
   padding: 1.5rem;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .status {

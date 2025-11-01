@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { renderToString as renderMathToString } from "katex";
+import rehypeKatex from "rehype-katex";
 
 export type RenderMarkdownOptions = {
   /**
@@ -13,47 +13,7 @@ export type RenderMarkdownOptions = {
   className?: string;
 };
 
-const mathComponents: Components = {
-  math({ value }) {
-    const html = renderMathToString(value ?? "", {
-      displayMode: true,
-      throwOnError: false,
-      strict: "warn",
-      trust: false,
-      output: "html",
-    });
-
-    return createElement("span", {
-      className: "vc-katex vc-katex-block",
-      role: "img",
-      "aria-label": value ?? "",
-      "data-katex-display": "block",
-      dangerouslySetInnerHTML: { __html: html },
-      "data-katex-source": value ?? "",
-    });
-  },
-  inlineMath({ value }) {
-    const html = renderMathToString(value ?? "", {
-      displayMode: false,
-      throwOnError: false,
-      strict: "warn",
-      trust: false,
-      output: "html",
-    });
-
-    return createElement("span", {
-      className: "vc-katex vc-katex-inline",
-      role: "img",
-      "aria-label": value ?? "",
-      "data-katex-display": "inline",
-      dangerouslySetInnerHTML: { __html: html },
-      "data-katex-source": value ?? "",
-    });
-  },
-};
-
 const baseComponents: Components = {
-  ...mathComponents,
   a({ children, ...props }) {
     return createElement(
       "a",
@@ -94,16 +54,34 @@ export function renderMarkdown(
   options: RenderMarkdownOptions = {},
 ): ReactElement {
   const trimmed = typeof markdown === "string" ? markdown.trim() : "";
+  const normalized = normalizeSquareBracketMath(trimmed);
 
   return createElement(
     ReactMarkdown,
     {
-      className: options.className,
       remarkPlugins: [remarkGfm, remarkMath],
+      rehypePlugins: [rehypeKatex],
       components: baseComponents,
       skipHtml: true,
-      linkTarget: "_blank",
-      children: trimmed,
+      children: normalized,
     },
   );
+}
+
+const squareBracketMathPattern = /\[(?<expr>[^\[\]\n]{1,256})\](?!\()/g;
+const mathSignalPattern = /[=^_\\]/;
+
+function normalizeSquareBracketMath(source: string): string {
+  return source.replace(squareBracketMathPattern, (match, expr) => {
+    if (!expr || !mathSignalPattern.test(expr)) {
+      return match;
+    }
+
+    const trimmed = expr.trim();
+    if (!trimmed) {
+      return match;
+    }
+
+    return '$' + trimmed + '$';
+  });
 }
