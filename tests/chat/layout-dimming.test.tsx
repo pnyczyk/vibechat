@@ -18,6 +18,33 @@ const sessionInstances: MockRealtimeSession[] = [];
 const originalFetch = global.fetch;
 
 jest.mock("@openai/agents/realtime", () => {
+  const tool = jest.fn().mockImplementation(
+    ({
+      name,
+      description,
+      parameters,
+      execute,
+    }: {
+      name: string;
+      description: string;
+      parameters: Record<string, unknown>;
+      execute: (input: unknown) => Promise<unknown> | unknown;
+    }) => {
+      const invoke = jest.fn(async (input: unknown) => execute(input));
+      return {
+        type: "function",
+        name,
+        description,
+        parameters,
+        strict: true,
+        invoke,
+        execute,
+        needsApproval: jest.fn(),
+        isEnabled: jest.fn(),
+      };
+    },
+  );
+
   class MockSession {
     connect = jest.fn().mockResolvedValue(undefined);
 
@@ -37,6 +64,7 @@ jest.mock("@openai/agents/realtime", () => {
   }
 
   return {
+    tool,
     RealtimeAgent: jest.fn().mockImplementation(() => ({})),
     RealtimeSession: jest.fn().mockImplementation(() => {
       const instance = new MockSession() as MockRealtimeSession;

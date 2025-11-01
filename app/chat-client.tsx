@@ -9,6 +9,7 @@ import styles from "./chat-client.module.css";
 import { SessionControls, SessionFeedback, ConnectionStatus } from "./components/SessionControls";
 import { EntryOverlay } from "./components/EntryOverlay";
 import type { TranscriptDrawerProps } from "./components/TranscriptDrawer";
+import { MarkdownViewer } from "./components/MarkdownViewer";
 import { TranscriptStore, type TranscriptEntry } from "./lib/transcript-store";
 import {
   McpAdapter,
@@ -17,6 +18,11 @@ import {
 } from "./lib/voice-agent/mcp-adapter";
 import { logTelemetry, type TelemetryTransport } from "./lib/analytics";
 import { createRealtimeSession } from "./lib/realtime-session-factory";
+import {
+  MarkdownStore,
+  type MarkdownDocument,
+  createShowMarkdownTool,
+} from "./lib/markdown-store";
 import { useThemeController } from "./providers";
 
 type VoiceActivityState = {
@@ -74,6 +80,9 @@ export function ChatClient() {
   const [toolRuns, setToolRuns] = useState<ToolRunState[]>([]);
   const [mcpTools, setMcpTools] = useState<McpToolSummary[]>([]);
   const [toolsInitialized, setToolsInitialized] = useState(false);
+  const markdownStore = useMemo(() => new MarkdownStore(), []);
+  const [markdownDocument, setMarkdownDocument] = useState<MarkdownDocument | null>(null);
+  const [isMarkdownLoading, setIsMarkdownLoading] = useState(false);
   const entryStartRef = useRef<number | null>(null);
   const entryTimestampRef = useRef<string | null>(null);
   const voiceStateRef = useRef<"waiting" | "idle" | "active">("waiting");
@@ -92,14 +101,48 @@ export function ChatClient() {
   })[0];
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserCleanupRef = useRef<(() => void) | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const showMarkdownTool = useMemo(() => {
+    const realtimeTool = createShowMarkdownTool(markdownStore);
+    const originalExecute = realtimeTool.execute.bind(realtimeTool);
+
+    Object.defineProperty(realtimeTool, "execute", {
+      value: async (input: unknown) => {
+        if (isMountedRef.current) {
+          setIsMarkdownLoading(true);
+        }
+        try {
+          return await originalExecute(input);
+        } finally {
+          if (isMountedRef.current) {
+            setIsMarkdownLoading(false);
+          }
+        }
+      },
+      enumerable: true,
+      configurable: true,
+    });
+
+    return realtimeTool;
+  }, [markdownStore]);
 
   const agentTools = useMemo(
     () =>
-      mcpTools.map((toolSummary) => {
-        const parameters =
-          toolSummary.inputSchema && Object.keys(toolSummary.inputSchema).length > 0
-            ? toolSummary.inputSchema
-            : defaultToolParameters;
+      [
+        showMarkdownTool,
+        ...mcpTools.map((toolSummary) => {
+          const parameters =
+            toolSummary.inputSchema && Object.keys(toolSummary.inputSchema).length > 0
+              ? toolSummary.inputSchema
+              : defaultToolParameters;
 
         const execute = async (args: unknown) => {
           try {
@@ -145,7 +188,8 @@ export function ChatClient() {
 
         return realtimeTool;
       }),
-    [mcpAdapter, mcpTools],
+      ],
+    [mcpAdapter, mcpTools, showMarkdownTool],
   );
 
   useEffect(() => {
@@ -248,12 +292,31 @@ export function ChatClient() {
   }, [session, transcriptStore]);
 
   useEffect(() => {
+    markdownStore.setSession(session);
+
+    return () => {
+      markdownStore.setSession(null);
+    };
+  }, [markdownStore, session]);
+
+  useEffect(() => {
     const unsubscribe = transcriptStore.subscribe((entries) => {
       setTranscriptEntries(entries);
     });
 
     return unsubscribe;
   }, [transcriptStore]);
+
+  useEffect(() => {
+    const unsubscribe = markdownStore.subscribe((document) => {
+      setMarkdownDocument(document);
+      if (!document && isMountedRef.current) {
+        setIsMarkdownLoading(false);
+      }
+    });
+
+    return unsubscribe;
+  }, [markdownStore]);
 
   useEffect(() => {
     let isFirstSync = true;
@@ -314,6 +377,23 @@ export function ChatClient() {
       transcriptStore.dispose();
     };
   }, [transcriptStore]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const globalWindow = window as typeof window & {
+      __vibeMarkdownStore?: MarkdownStore;
+    };
+    globalWindow.__vibeMarkdownStore = markdownStore;
+
+    return () => {
+      if (globalWindow.__vibeMarkdownStore === markdownStore) {
+        delete globalWindow.__vibeMarkdownStore;
+      }
+    };
+  }, [markdownStore]);
 
   useEffect(() => {
     if ((isTranscriptOpen || transcriptEntries.length > 0) && !isTranscriptReady) {
@@ -750,7 +830,9 @@ export function ChatClient() {
           </Typography>
         </header>
 
-        <div className={styles.surface} role="presentation" />
+        <div className={styles.surface} role="presentation">
+          <MarkdownViewer document={markdownDocument} isLoading={isMarkdownLoading} />
+        </div>
 
         {toolRuns.length > 0 && (
           <div
