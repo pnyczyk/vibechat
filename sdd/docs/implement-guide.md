@@ -58,6 +58,11 @@ Load always:
 ### Documentation
 Update as needed: inline comments, API docs, README. Keep in sync with code.
 
+## Task Tracker Sync
+- While implementing, update `sdd/features/{feature-name}/tasks.md` on the same branch. Mark the task `In Progress` when you start coding (optional) and switch it to `Completed` as soon as the acceptance criteria, tests, and docs are satisfied.
+- Include the tasks file change in every implementation PR. Reviewers should block merges that ship code without the matching status update.
+- Before opening a PR, confirm the staged diff shows the task status change so it lands with the code that fulfilled it.
+
 ## Automatic Verification
 
 Run automatically (never skip):

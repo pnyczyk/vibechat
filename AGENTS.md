@@ -174,3 +174,6 @@ Principles:
 - Tasks break down HOW (implementation steps, 8-20 per feature)
 - Tests embedded in implementation tasks (not separate)
 - Context always loaded: AGENTS.md + spec + task details
+
+Task Tracker Enforcement:
+- Every implementation PR must update the corresponding `sdd/features/<feature>/tasks.md` entries. Set the task to `Completed` (or the appropriate in-progress state) in the same commit/PR that ships the code; reviewers should block changes that omit this diff.
