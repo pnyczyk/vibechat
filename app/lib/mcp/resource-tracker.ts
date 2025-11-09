@@ -4,7 +4,6 @@ import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import {
   ResourceListChangedNotificationSchema,
   ResourceUpdatedNotificationSchema,
-  type ReadResourceResult,
   type Resource,
 } from '@modelcontextprotocol/sdk/types.js';
 import { ZodError } from 'zod';
@@ -19,8 +18,6 @@ export type ResourceUpdateEvent = {
   type: 'resource_update';
   serverId: string;
   resourceUri: string;
-  resource?: Resource;
-  contents: ReadResourceResult['contents'];
   receivedAt: number;
 };
 
@@ -29,13 +26,19 @@ export type ResourceErrorEvent = {
   serverId: string;
   resourceUri?: string;
   receivedAt: number;
-  reason: 'unsupported' | 'refresh' | 'subscription' | 'read';
+  reason: 'unsupported' | 'refresh' | 'subscription';
   error: string;
 };
 
 type TrackerEvent = ResourceUpdateEvent | ResourceErrorEvent;
 
-type TrackerEventName = TrackerEvent['type'];
+type TrackerEventMap = {
+  resource_update: ResourceUpdateEvent;
+  resource_error: ResourceErrorEvent;
+  tracker_stopped: void;
+};
+
+type TrackerEventName = keyof TrackerEventMap;
 
 export interface ResourceTrackerLogger {
   info?: (message: string) => void;
@@ -55,13 +58,6 @@ export interface McpResourceTrackerOptions {
   now?: () => number;
 }
 
-interface PendingRead {
-  uri: string;
-  attempt: number;
-  timer?: NodeJS.Timeout;
-  notificationTimestamp: number;
-}
-
 interface TrackedServerState {
   serverId: string;
   definition: McpServerDefinition;
@@ -71,7 +67,6 @@ interface TrackedServerState {
   subscriptions: Set<string>;
   resources: Map<string, Resource>;
   lastEmitAt: Map<string, number>;
-  pendingReads: Map<string, PendingRead>;
   retryAttempt: number;
   retryTimer?: NodeJS.Timeout;
   pendingRefresh: Promise<void> | null;
@@ -90,6 +85,7 @@ const DEFAULT_LOGGER: Required<ResourceTrackerLogger> = {
   warn: console.warn.bind(console),
   error: console.error.bind(console),
 };
+
 
 export class McpResourceTracker extends EventEmitter {
   private readonly manager: McpServerManager;
@@ -146,8 +142,12 @@ export class McpResourceTracker extends EventEmitter {
     eventName: 'resource_error',
     listener: (event: ResourceErrorEvent) => void,
   ): this;
-  override on(eventName: TrackerEventName, listener: (event: TrackerEvent) => void) {
-    return super.on(eventName, listener);
+  override on(eventName: 'tracker_stopped', listener: () => void): this;
+  override on<K extends TrackerEventName>(
+    eventName: K,
+    listener: (event: TrackerEventMap[K]) => void,
+  ): this {
+    return super.on(eventName, listener as (...args: unknown[]) => void);
   }
 
   override emit(
@@ -158,8 +158,12 @@ export class McpResourceTracker extends EventEmitter {
     eventName: 'resource_error',
     payload: ResourceErrorEvent,
   ): boolean;
-  override emit(eventName: TrackerEventName, payload: TrackerEvent): boolean {
-    return super.emit(eventName, payload);
+  override emit(eventName: 'tracker_stopped'): boolean;
+  override emit<K extends TrackerEventName>(
+    eventName: K,
+    payload?: TrackerEventMap[K],
+  ): boolean {
+    return super.emit(eventName, payload as TrackerEventMap[K]);
   }
 
   async start(): Promise<void> {
@@ -196,6 +200,8 @@ export class McpResourceTracker extends EventEmitter {
 
     const serverIds = Array.from(this.tracked.keys());
     await Promise.all(serverIds.map((id) => this.disposeServer(id)));
+
+    this.emit('tracker_stopped');
   }
 
   private async syncServers(): Promise<void> {
@@ -242,7 +248,6 @@ export class McpResourceTracker extends EventEmitter {
       subscriptions: new Set(),
       resources: new Map(),
       lastEmitAt: new Map(),
-      pendingReads: new Map(),
       retryAttempt: 0,
       retryTimer: undefined,
       pendingRefresh: null,
@@ -459,7 +464,6 @@ export class McpResourceTracker extends EventEmitter {
     for (const uri of toRemove) {
       await this.safeUnsubscribe(client, state.serverId, uri);
       state.lastEmitAt.delete(uri);
-      this.clearPendingRead(state, uri);
     }
 
     state.subscriptions = new Set(nextResources.keys());
@@ -483,88 +487,13 @@ export class McpResourceTracker extends EventEmitter {
     if (lastEmit !== undefined && now - lastEmit < this.dedupeWindowMs) {
       return;
     }
-
-    if (state.pendingReads.has(uri)) {
-      return;
-    }
-
-    const pending: PendingRead = {
-      uri,
-      attempt: 0,
-      notificationTimestamp: now,
-    };
-    state.pendingReads.set(uri, pending);
-    this.logger.info?.(
-      `[mcp-resource-tracker] queued resources/read server="${state.serverId}" uri=${uri}`,
-    );
-    void this.readResourceWithRetry(state, pending);
-  }
-
-  private async readResourceWithRetry(
-    state: TrackedServerState,
-    pending: PendingRead,
-  ): Promise<void> {
-    if (state.disposed || state.unsupported) {
-      this.clearPendingRead(state, pending.uri);
-      return;
-    }
-
-    const client = state.client;
-    if (!client) {
-      this.handleRefreshError(
-        state,
-        state.runtime,
-        'read',
-        new Error('Client unavailable'),
-      );
-      this.clearPendingRead(state, pending.uri);
-      return;
-    }
-
-    try {
-      this.logger.info?.(
-        `[mcp-resource-tracker] resources/read start server="${state.serverId}" ` +
-          `uri=${pending.uri} attempt=${pending.attempt + 1}`,
-      );
-      const result = await client.readResource({ uri: pending.uri });
-      this.logger.info?.(
-        `[mcp-resource-tracker] resources/read success server="${state.serverId}" ` +
-          `uri=${pending.uri} contents=${result.contents.length}`,
-      );
-      this.emit('resource_update', {
-        type: 'resource_update',
-        serverId: state.serverId,
-        resourceUri: pending.uri,
-        resource: state.resources.get(pending.uri),
-        contents: result.contents,
-        receivedAt: this.now(),
-      });
-      state.lastEmitAt.set(pending.uri, this.now());
-      this.clearPendingRead(state, pending.uri);
-    } catch (error) {
-      const delay = Math.min(
-        this.retryInitialMs * 2 ** pending.attempt,
-        this.retryMaxMs,
-      );
-      pending.attempt += 1;
-      recordResourceTrackerEvent({
-        type: 'resource_tracker',
-        event: 'read_failed',
-        serverId: state.serverId,
-        resourceUri: pending.uri,
-        attempt: pending.attempt,
-        delayMs: delay,
-        error: this.formatError(error),
-      });
-      this.logger.warn?.(
-        `[mcp-resource-tracker] Failed to read resource "${pending.uri}" ` +
-          `from "${state.serverId}": ${this.formatError(error)}. Retrying in ${delay}ms`,
-      );
-      pending.timer = setTimeout(() => {
-        pending.timer = undefined;
-        void this.readResourceWithRetry(state, pending);
-      }, delay);
-    }
+    state.lastEmitAt.set(uri, now);
+    this.emit('resource_update', {
+      type: 'resource_update',
+      serverId: state.serverId,
+      resourceUri: uri,
+      receivedAt: now,
+    });
   }
 
   private async disposeServer(serverId: string): Promise<void> {
@@ -578,13 +507,6 @@ export class McpResourceTracker extends EventEmitter {
       clearTimeout(state.retryTimer);
       state.retryTimer = undefined;
     }
-
-    for (const pending of state.pendingReads.values()) {
-      if (pending.timer) {
-        clearTimeout(pending.timer);
-      }
-    }
-    state.pendingReads.clear();
 
       await this.detachNotifications(state);
 
@@ -662,17 +584,6 @@ export class McpResourceTracker extends EventEmitter {
       reason,
       error: this.formatError(error),
     });
-  }
-
-  private clearPendingRead(state: TrackedServerState, uri: string): void {
-    const pending = state.pendingReads.get(uri);
-    if (!pending) {
-      return;
-    }
-    if (pending.timer) {
-      clearTimeout(pending.timer);
-    }
-    state.pendingReads.delete(uri);
   }
 
   private isUnsupportedError(error: unknown): boolean {

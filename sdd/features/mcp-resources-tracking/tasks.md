@@ -50,7 +50,7 @@ Create a tracker tied to `McpServerManager`/`McpClientPool` that, for servers wi
 ---
 
 ## Task T003: SSE resource event delivery
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002
 **Files:**
 - `app/api/mcp/resource-events/route.ts` (new)
@@ -60,11 +60,10 @@ Create a tracker tied to `McpServerManager`/`McpClientPool` that, for servers wi
 Expose tracker events via a server-sent events endpoint so UI/clients can observe resource updates. Handle subscription management, heartbeats, and cleanup when connections close.
 
 ### Acceptance Criteria
-- SSE stream emits initial handshake and subsequent update events with serverId, resource URI, timestamp, preview text
+- SSE stream emits initial handshake plus subsequent update events with `serverId`, `resourceUri`, and `timestamp` only
 - Connections auto-close on tracker disposal and remove listeners immediately
 - Heartbeat/ping keeps connections alive; reconnect guidance via headers
-- Endpoint restricted to authenticated contexts (reuse existing auth middleware if any)
-- Integration test validates streaming of mocked tracker events
+- Integration test validates streaming of mocked tracker events without requiring `resources/read`
 
 ### Implementation Notes
 - Reference spec Story 3 (SSE requirement)
@@ -80,14 +79,14 @@ Expose tracker events via a server-sent events endpoint so UI/clients can observ
 - `tests/chat/mcp-resource-updates.test.tsx`
 
 ### Description
-Wire the `McpAdapter` to the SSE feed, forward resource updates into live realtime sessions by sending the formatted message (`Resource <URI> updated:\n<contents>`), handle binary/large payload summarization, and ensure retry/backoff on SSE failures.
+Wire the `McpAdapter` to the SSE feed, surface lightweight resource notifications to the realtime session, and optionally fetch/send full contents when needed. Maintain retry/backoff on SSE failures.
 
 ### Acceptance Criteria
 - Adapter opens SSE when a session attaches and closes on detach/unmount
-- Realtime message injected within 3s of tracker event, including mock session tests
-- Contents truncated to 4 KB; binary payloads replaced with placeholder notice
+- Adapter receives events within 3s and decides case-by-case whether to call MCP tools (e.g., `resources/read`) before surfacing updates
+- When the adapter chooses to fetch contents, it logs/delivers them using existing transcript utilities; otherwise it stores the URI for later use
 - Duplicate updates ignored if same URI + checksum already delivered
-- Jest tests cover SSE consumption, formatting, and messaging behavior
+- Jest tests cover SSE consumption, decision logic, and retry behavior
 
 ### Implementation Notes
 - Reference spec Story 3

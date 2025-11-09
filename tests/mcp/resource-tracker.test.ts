@@ -45,15 +45,6 @@ describe('McpResourceTracker', () => {
       resources: [createResource('mcp://resource/alpha')],
       nextCursor: null,
     });
-    client.readResource.mockResolvedValue({
-      contents: [
-        {
-          type: 'text',
-          text: 'hello world',
-          mimeType: 'text/plain',
-        },
-      ],
-    });
 
     const manager = createManager();
     const server = createRuntimeServer();
@@ -133,11 +124,6 @@ describe('McpResourceTracker', () => {
     client.listResources.mockResolvedValue({
       resources: [createResource('mcp://resource/alpha')],
       nextCursor: null,
-    });
-    client.readResource.mockResolvedValue({
-      contents: [
-        { type: 'text', text: 'payload', mimeType: 'text/plain' },
-      ],
     });
 
     const manager = createManager();
