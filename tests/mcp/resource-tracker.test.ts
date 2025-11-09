@@ -356,6 +356,10 @@ const createResource = (uri: string) => ({
 });
 
 const flushAsync = async () => {
-  await Promise.resolve();
-  await Promise.resolve();
+  // Give pending async tasks (promise chains + timers) plenty of chances
+  // to resolve so tracker refreshes complete before assertions run.
+  for (let i = 0; i < 20; i += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await Promise.resolve();
+  }
 };

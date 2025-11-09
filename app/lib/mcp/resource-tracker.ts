@@ -7,6 +7,7 @@ import {
   type ReadResourceResult,
   type Resource,
 } from '@modelcontextprotocol/sdk/types.js';
+import { ZodError } from 'zod';
 
 import type { McpClientPool } from './client-pool';
 import type { McpServerDefinition } from './config';
@@ -412,7 +413,15 @@ export class McpResourceTracker extends EventEmitter {
     let cursor: string | undefined;
     do {
       const params = cursor ? { cursor } : {};
+      this.logger.info?.(
+        `[mcp-resource-tracker] resources/list start server="${state.serverId}" ` +
+          `cursor=${cursor ?? 'null'}`,
+      );
       const result = await client.listResources(params);
+      this.logger.info?.(
+        `[mcp-resource-tracker] resources/list success server="${state.serverId}" ` +
+          `count=${result.resources.length} next=${result.nextCursor ?? 'null'}`,
+      );
       resources.push(...result.resources);
       cursor = result.nextCursor ?? undefined;
     } while (cursor);
@@ -444,11 +453,11 @@ export class McpResourceTracker extends EventEmitter {
     const toRemove = Array.from(current.values());
 
     for (const uri of toAdd) {
-      await client.subscribeResource({ uri });
+      await this.safeSubscribe(client, state.serverId, uri);
     }
 
     for (const uri of toRemove) {
-      await client.unsubscribeResource({ uri }).catch(() => {});
+      await this.safeUnsubscribe(client, state.serverId, uri);
       state.lastEmitAt.delete(uri);
       this.clearPendingRead(state, uri);
     }
@@ -464,6 +473,10 @@ export class McpResourceTracker extends EventEmitter {
     if (state.disposed || state.unsupported) {
       return;
     }
+
+    this.logger.info?.(
+      `[mcp-resource-tracker] notification resources/updated server="${state.serverId}" uri=${uri}`,
+    );
 
     const now = this.now();
     const lastEmit = state.lastEmitAt.get(uri);
@@ -481,6 +494,9 @@ export class McpResourceTracker extends EventEmitter {
       notificationTimestamp: now,
     };
     state.pendingReads.set(uri, pending);
+    this.logger.info?.(
+      `[mcp-resource-tracker] queued resources/read server="${state.serverId}" uri=${uri}`,
+    );
     void this.readResourceWithRetry(state, pending);
   }
 
@@ -506,7 +522,15 @@ export class McpResourceTracker extends EventEmitter {
     }
 
     try {
+      this.logger.info?.(
+        `[mcp-resource-tracker] resources/read start server="${state.serverId}" ` +
+          `uri=${pending.uri} attempt=${pending.attempt + 1}`,
+      );
       const result = await client.readResource({ uri: pending.uri });
+      this.logger.info?.(
+        `[mcp-resource-tracker] resources/read success server="${state.serverId}" ` +
+          `uri=${pending.uri} contents=${result.contents.length}`,
+      );
       this.emit('resource_update', {
         type: 'resource_update',
         serverId: state.serverId,
@@ -562,16 +586,16 @@ export class McpResourceTracker extends EventEmitter {
     }
     state.pendingReads.clear();
 
-    await this.detachNotifications(state);
+      await this.detachNotifications(state);
 
-    const client = state.client;
-    if (client && state.subscriptions.size > 0) {
-      await Promise.allSettled(
-        Array.from(state.subscriptions).map((uri) =>
-          client.unsubscribeResource({ uri }).catch(() => {}),
-        ),
-      );
-    }
+      const client = state.client;
+      if (client && state.subscriptions.size > 0) {
+        await Promise.allSettled(
+          Array.from(state.subscriptions).map((uri) =>
+            this.safeUnsubscribe(client, serverId, uri),
+          ),
+        );
+      }
 
     state.subscriptions.clear();
     state.resources.clear();
@@ -664,5 +688,78 @@ export class McpResourceTracker extends EventEmitter {
       return error;
     }
     return JSON.stringify(error);
+  }
+
+  private isIgnorableResponseShapeError(error: unknown): boolean {
+    if (!(error instanceof ZodError)) {
+      return false;
+    }
+    return error.issues.some(
+      (issue) =>
+        issue.code === 'unrecognized_keys' &&
+        'keys' in issue &&
+        Array.isArray((issue as { keys?: string[] }).keys) &&
+        ((issue as { keys?: string[] }).keys?.includes('uri') ?? false),
+    );
+  }
+
+  private async safeSubscribe(
+    client: Client,
+    serverId: string,
+    uri: string,
+  ): Promise<void> {
+    try {
+      this.logger.info?.(
+        `[mcp-resource-tracker] -> resources/subscribe server="${serverId}" ` +
+          `payload=${JSON.stringify({ uri })}`,
+      );
+      await client.subscribeResource({ uri });
+      this.logger.info?.(
+        `[mcp-resource-tracker] <- resources/subscribe server="${serverId}" ` +
+          `response={}`,
+      );
+    } catch (error) {
+      if (this.isIgnorableResponseShapeError(error)) {
+        this.logger.warn?.(
+          `[mcp-resource-tracker] subscribe response for "${uri}" on "${serverId}" ` +
+            'contained unexpected keys; treating as success.',
+        );
+        return;
+      }
+      this.logger.error?.(
+        `[mcp-resource-tracker] subscribe failed for "${uri}" on ` +
+          `"${serverId}": ${this.formatError(error)}`,
+      );
+      throw error;
+    }
+  }
+
+  private async safeUnsubscribe(
+    client: Client,
+    serverId: string,
+    uri: string,
+  ): Promise<void> {
+    try {
+      this.logger.info?.(
+        `[mcp-resource-tracker] -> resources/unsubscribe server="${serverId}" ` +
+          `payload=${JSON.stringify({ uri })}`,
+      );
+      await client.unsubscribeResource({ uri });
+      this.logger.info?.(
+        `[mcp-resource-tracker] <- resources/unsubscribe server="${serverId}" response={}`,
+      );
+    } catch (error) {
+      if (this.isIgnorableResponseShapeError(error)) {
+        this.logger.warn?.(
+          `[mcp-resource-tracker] unsubscribe response for "${uri}" on "${serverId}" ` +
+            'contained unexpected keys; treating as success.',
+        );
+        return;
+      }
+      this.logger.warn?.(
+        `[mcp-resource-tracker] unsubscribe failed for "${uri}" on ` +
+          `"${serverId}": ${this.formatError(error)}`,
+      );
+    }
   }
 }

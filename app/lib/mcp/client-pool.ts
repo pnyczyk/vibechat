@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -9,6 +11,17 @@ import {
 import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 
 import type { McpServerDefinition } from './config';
+
+const MCP_DEBUG_LOG_PATH = path.join(process.cwd(), 'logs', 'mcp-debug.log');
+
+const appendDebugLog = (message: string): void => {
+  try {
+    fs.mkdirSync(path.dirname(MCP_DEBUG_LOG_PATH), { recursive: true });
+    fs.appendFileSync(MCP_DEBUG_LOG_PATH, `${message}\n`);
+  } catch (error) {
+    console.error('[mcp-client-pool] failed to write debug log:', error);
+  }
+};
 
 export interface ClientPoolLogger {
   warn?: (message: string) => void;
@@ -186,14 +199,38 @@ class ExistingProcessTransport {
   private handleChunk(chunk: Buffer) {
     this.readBuffer.append(chunk);
 
+    let lastMessage: JSONRPCMessage | null = null;
     while (true) {
       try {
         const message = this.readBuffer.readMessage();
         if (message === null) {
           break;
         }
+        lastMessage = message;
         this.onmessage?.(message);
       } catch (error) {
+        const chunkString = chunk.toString('utf-8');
+        const payloadPreview = (() => {
+          try {
+            if (lastMessage) {
+              return JSON.stringify(lastMessage).slice(0, 500);
+            }
+          } catch {
+            // fall through
+          }
+          return chunkString.slice(0, 500);
+        })();
+        console.log('[mcp-client-pool] raw chunk:', chunkString);
+        console.log(
+          '[mcp-client-pool] failed to handle MCP message:',
+          payloadPreview,
+        );
+        appendDebugLog(
+          `[${new Date().toISOString()}] raw chunk: ${chunkString}`,
+        );
+        appendDebugLog(
+          `[${new Date().toISOString()}] failed payload: ${payloadPreview}`,
+        );
         this.onerror?.(error as Error);
         break;
       }

@@ -9,9 +9,28 @@ export interface McpRuntime {
   policy: McpToolPolicy;
 }
 
-let runtime: McpRuntime | null = null;
-let startPromise: Promise<void> | null = null;
-let resourceTracker: McpResourceTracker | null = null;
+type GlobalMcpState = {
+  runtime: McpRuntime | null;
+  startPromise: Promise<void> | null;
+  tracker: McpResourceTracker | null;
+  trackerStartPromise: Promise<McpResourceTracker> | null;
+};
+
+const globalState = globalThis as typeof globalThis & {
+  __vibechatMcpState?: GlobalMcpState;
+};
+
+function getGlobalState(): GlobalMcpState {
+  if (!globalState.__vibechatMcpState) {
+    globalState.__vibechatMcpState = {
+      runtime: null,
+      startPromise: null,
+      tracker: null,
+      trackerStartPromise: null,
+    };
+  }
+  return globalState.__vibechatMcpState;
+}
 
 function createRuntime(): McpRuntime {
   const manager = new McpServerManager();
@@ -22,50 +41,67 @@ function createRuntime(): McpRuntime {
 }
 
 export function getMcpRuntime(): McpRuntime {
-  if (!runtime) {
-    runtime = createRuntime();
+  const state = getGlobalState();
+  if (!state.runtime) {
+    state.runtime = createRuntime();
   }
-  return runtime;
+  return state.runtime;
 }
 
 export function getMcpResourceTracker(): McpResourceTracker {
-  if (!resourceTracker) {
+  const state = getGlobalState();
+  if (!state.tracker) {
     const instance = getMcpRuntime();
-    resourceTracker = new McpResourceTracker({
+    state.tracker = new McpResourceTracker({
       manager: instance.manager,
       clientPool: instance.clientPool,
       ensureServersStarted: ensureMcpServersStarted,
     });
   }
-  return resourceTracker;
+  return state.tracker;
 }
 
 export function ensureMcpServersStarted(): Promise<void> {
+  const state = getGlobalState();
   const instance = getMcpRuntime();
-  if (!startPromise) {
-    startPromise = instance.manager.start().catch((error) => {
-      // Reset so subsequent calls can retry after a failure.
-      startPromise = null;
-      throw error;
-    });
+  if (!state.startPromise) {
+    state.startPromise = instance.manager
+      .start()
+      .then(() => {
+        void ensureMcpResourceTrackerStarted();
+      })
+      .catch((error) => {
+        state.startPromise = null;
+        throw error;
+      });
   }
-  return startPromise;
+  return state.startPromise;
 }
 
 export async function ensureMcpResourceTrackerStarted(): Promise<McpResourceTracker> {
-  const tracker = getMcpResourceTracker();
-  await tracker.start();
-  return tracker;
+  const state = getGlobalState();
+  if (!state.trackerStartPromise) {
+    const tracker = getMcpResourceTracker();
+    state.trackerStartPromise = tracker.start().then(() => tracker).catch((error) => {
+      state.trackerStartPromise = null;
+      throw error;
+    });
+  }
+  return state.trackerStartPromise;
 }
 
 export function setMcpRuntimeForTesting(next: McpRuntime | null): void {
-  runtime = next;
-  startPromise = null;
-  resourceTracker = null;
+  const state = getGlobalState();
+  state.runtime = next;
+  state.startPromise = null;
+  state.tracker = null;
+  state.trackerStartPromise = null;
 }
 
 export function setMcpResourceTrackerForTesting(
   next: McpResourceTracker | null,
 ): void {
-  resourceTracker = next;
+  const state = getGlobalState();
+  state.tracker = next;
+  state.trackerStartPromise = null;
 }
