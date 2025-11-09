@@ -199,10 +199,6 @@ export function ChatClient() {
 
     const baseConfig = {
       name: "Assistant",
-      instructions: "You are a helpful assistant that coordinates multiple background tasks."
-        + "When asked to do anything more complex than a very simple question start a new task, wait for it to finish and report the result."
-        + "When listing tasks to user don't provide any internal ids or metadata, only the task name, unless user specifically asks for it."
-        + "Reuse existing tasks where possible by sending a message, instead of starting new ones. This depends on the directory (project) that the task is associated with."
     };
 
     const config =

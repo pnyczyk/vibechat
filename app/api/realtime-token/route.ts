@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+import { getRealtimeInstructions } from '@/app/lib/realtime-instructions';
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const REALTIME_MODEL = 'gpt-realtime';
 
@@ -9,6 +11,14 @@ export async function GET() {
       { error: 'Server is missing OPENAI_API_KEY' },
       { status: 500 },
     );
+  }
+
+  let instructions: string;
+  try {
+    instructions = await getRealtimeInstructions();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to load instructions';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   try {
@@ -22,6 +32,7 @@ export async function GET() {
         session: {
           type: 'realtime',
           model: REALTIME_MODEL,
+          instructions,
         },
       }),
     });

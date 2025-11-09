@@ -21,6 +21,11 @@ The development server runs on <http://localhost:3000>. Playwright E2E specs exp
 | `npm test` | Run Jest unit/integration suites |
 | `npm run test:e2e` | Run Playwright scenarios (requires dev server) |
 
+## Realtime Agent Instructions
+
+- Author the assistant system prompt in `config/instructions.md`. The API route `GET /api/realtime-token` reads the file, injects the text into the session request sent to OpenAI, and caches it based on file mtime.
+- If the file is missing or empty the token route responds with an error, preventing stale or insecure instructions from reaching production. Update the markdown file and redeploy to roll out new guidance without touching the client bundle.
+
 ## MCP Integration
 
 - **Server configuration:** Define MCP hosts in `config/mcp-servers.json`. Each entry includes `id`, `command`, `args`, and an optional `enabled` flag. The `McpServerManager` spawns and supervises processes with exponential backoff and supports hot reloads via the admin API.
