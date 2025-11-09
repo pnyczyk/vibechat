@@ -8,6 +8,7 @@ export interface McpServerDefinition {
   description?: string;
   enabled: boolean;
   workingDirectory: string;
+  trackResources: boolean;
 }
 
 export interface McpServerConfig {
@@ -177,6 +178,21 @@ function validateAndNormalizeConfig(
     const enabled =
       'enabled' in value ? (value.enabled as boolean) : (true as boolean);
 
+    if (
+      'trackResources' in value &&
+      typeof value.trackResources !== 'boolean'
+    ) {
+      throwConfigError(
+        `Server "${id}" has invalid "trackResources"; expected boolean`,
+        configPath,
+        logger,
+      );
+    }
+    const trackResources =
+      'trackResources' in value
+        ? (value.trackResources as boolean)
+        : (false as boolean);
+
     const description =
       'description' in value && typeof value.description === 'string'
         ? value.description
@@ -202,6 +218,7 @@ function validateAndNormalizeConfig(
       description,
       enabled,
       workingDirectory,
+      trackResources,
     };
   });
 

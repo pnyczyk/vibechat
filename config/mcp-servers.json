@@ -6,7 +6,8 @@
       "args": ["mcp"],
       "workingDirectory": "/var/vibechat/projects",
       "description": "Codex Tasks workflow",
-      "enabled": true
+      "enabled": true,
+      "trackResources": true
     },
     {
       "id": "filesystem",
@@ -14,7 +15,8 @@
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
       "workingDirectory": "/var/vibechat/projects",
       "description": "Filesystem access",
-      "enabled": true
+      "enabled": false,
+      "trackResources": false
     }
   ]
 }

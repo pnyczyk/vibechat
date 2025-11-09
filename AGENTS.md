@@ -149,6 +149,7 @@ Store the prompts under `~/.codex/prompts/` so `/prompts:sdd-*` commands can ref
 ## MCP Tools
 
 - Server side catalog aggregation lives in `app/lib/mcp/catalog-service.ts`; it bootstraps the shared `McpServerManager` and caches descriptors for 5 seconds while filtering revoked tools through `McpToolPolicy`.
+- Servers opt into upcoming MCP resource tracking by setting `trackResources=true` in `config/mcp-servers.json`. Leave the flag at its default `false` unless the server implements `resources/list`, `resources/subscribe`, and `resources/read`; the runtime keeps the flag on `McpServerDefinition` snapshots so trackers can subscribe immediately after launch or reload.
 - Tool invocation requests flow through `app/lib/mcp/invocation-service.ts` and the `POST /api/mcp/invoke` route where payloads are schema-checked, latency is logged, and streaming updates emit SSE frames back to the client. Telemetry events are recorded for every outcome.
 - Admin automation runs via `POST /api/mcp/admin` supporting `revoke`, `restore`, and `reload-config`; requests must include `Authorization: Bearer $MCP_ADMIN_TOKEN` and will cancel in-flight invocations plus invalidate the catalog cache.
 - Client hydration is handled by `McpAdapter` in `app/lib/voice-agent/mcp-adapter.ts`. The adapter fetches the catalog on session attach, pushes hosted MCP tool definitions into the realtime session, listens for `mcp_tool_call` transport events, and mirrors progress into UI state.
