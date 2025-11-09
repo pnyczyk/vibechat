@@ -334,6 +334,7 @@ export class McpServerManager {
       current.description !== next.description ||
       current.enabled !== next.enabled ||
       current.workingDirectory !== next.workingDirectory ||
+      current.trackResources !== next.trackResources ||
       current.args.length !== next.args.length ||
       current.args.some((arg, index) => next.args[index] !== arg)
     );

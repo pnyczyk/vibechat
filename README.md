@@ -28,7 +28,21 @@ The development server runs on <http://localhost:3000>. Playwright E2E specs exp
 
 ## MCP Integration
 
-- **Server configuration:** Define MCP hosts in `config/mcp-servers.json`. Each entry includes `id`, `command`, `args`, and an optional `enabled` flag. The `McpServerManager` spawns and supervises processes with exponential backoff and supports hot reloads via the admin API.
+- **Server configuration:** Define MCP hosts in `config/mcp-servers.json`. Each entry includes `id`, `command`, `args`, an optional `enabled` flag, and the `trackResources` toggle (default `false`). Set `trackResources=true` only for servers that expose `resources/list`, `resources/subscribe`, and `resources/read`; the resource tracker will subscribe to their feeds within ~5 seconds of startup once the service is enabled.
+- **Resource updates:** When tracking is enabled, VibeChat mirrors `notifications/resources/*` events into realtime sessions and SSE consumers (see feature `mcp-resources-tracking`). Servers without resource support should keep the flag `false` to avoid unnecessary subscriptions.
+
+Example entry with tracking enabled:
+
+```json
+{
+  "id": "instruction-packs",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-filesystem", "/srv/instructions"],
+  "workingDirectory": "/srv/instructions",
+  "enabled": true,
+  "trackResources": true
+}
+```
 - **Catalog service:** `GET /api/mcp/catalog` emits a cached snapshot of active tools enriched with permission scopes. Failures and cache hits emit telemetry via `recordCatalogHandshake`.
 - **Invocation pipeline:** `POST /api/mcp/invoke` validates payloads, streams SSE updates, enforces permission scopes, and records latency metrics. Clients can cancel invocations with `DELETE /api/mcp/invoke?invocationId=<id>`.
 - **Admin controls:** `POST /api/mcp/admin` accepts `revoke`, `restore`, or `reload-config` actions. Requests must include `Authorization: Bearer $MCP_ADMIN_TOKEN`. Revocations immediately cancel active invocations and flush the catalog cache.

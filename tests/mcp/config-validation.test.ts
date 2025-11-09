@@ -36,6 +36,7 @@ describe('loadMcpConfigSync', () => {
           description: 'Codex tasks MCP server',
           workingDirectory: '.',
           enabled: true,
+          trackResources: true,
         },
         {
           id: 'disabled-server',
@@ -56,6 +57,7 @@ describe('loadMcpConfigSync', () => {
       description: 'Codex tasks MCP server',
       workingDirectory: path.resolve(process.cwd(), '.'),
       enabled: true,
+      trackResources: true,
     });
     expect(config.servers[1]).toEqual({
       id: 'disabled-server',
@@ -64,6 +66,7 @@ describe('loadMcpConfigSync', () => {
       description: undefined,
       workingDirectory: process.cwd(),
       enabled: false,
+      trackResources: false,
     });
     expect(logger.error).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
@@ -115,6 +118,27 @@ describe('loadMcpConfigSync', () => {
     expect(config.servers).toEqual([]);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('No config found'),
+    );
+  });
+
+  it('throws when trackResources is not boolean', () => {
+    const logger = createLogger();
+    const filePath = createTempConfig({
+      servers: [
+        {
+          id: 'invalid-track-flag',
+          command: 'echo',
+          args: [],
+          trackResources: 'yes',
+        },
+      ],
+    });
+
+    expect(() =>
+      loadMcpConfigSync({ configPath: filePath, logger }),
+    ).toThrow(McpConfigError);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('invalid "trackResources"'),
     );
   });
 });
