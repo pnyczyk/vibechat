@@ -40,9 +40,8 @@ Upcoming voice workflows depend on MCP-hosted instruction packs. Without automat
 **So that** the assistant responds with the latest instructions or data without re-entry
 
 **Acceptance Criteria:**
-- [ ] When a subscribed resource fires `notifications/resources/updated`, VibeChat reads it via `resources/read` and formats a message: `Resource <URI> updated:\n<contents>` (contents truncated to 4 KB)
-- [ ] Message is injected into the live realtime session transcript (and mocked session in tests) within 3 seconds of the notification being received
-- [ ] Binary or excessively large resources are summarized with a placeholder notice instead of raw bytes
+- [ ] When a subscribed resource fires `notifications/resources/updated`, VibeChat emits a lightweight event containing `serverId`, `resourceUri`, and a timestamp within 3 seconds of receipt
+- [ ] The realtime adapter receives the event and decides whether/when to fetch contents (e.g., via MCP tools) without blocking the original notification path
 - [ ] Updates are also exposed via a server-sent events (SSE) endpoint so UI components can reflect resource activity
 
 ## Success Metrics
@@ -72,5 +71,4 @@ What external factors does this feature depend on?
 
 ### Assumptions
 - Resource contents are predominantly UTF-8 text; binary payloads can be summarized without degrading the agent experience
-- Only authenticated operators can hit the SSE endpoint; no additional auth work is required beyond existing protections
 - Realtime sessions already handle injected system messages without extra UX changes
