@@ -109,6 +109,7 @@ Store the prompts under `~/.codex/prompts/` so `/prompts:sdd-*` commands can ref
 ### Documentation
 - Update SDD specs/tasks alongside feature work; keep `sdd/features.md` current
 - Add focused README sections when introducing new agent capabilities
+- Store realtime agent instructions in `config/instructions.md`; the token endpoint injects this content server-side so never reintroduce hardcoded prompts in client bundles.
 
 ### GitHub Sync Workflow
 - Start every coding session by running `gh issue status` and `gh pr status` to understand active work and before answering status questions.

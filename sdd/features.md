@@ -33,6 +33,13 @@ Refine the full-viewport chat canvas with lightning entry, minimalist controls, 
 - **Dependencies:** ui-overhaul
 - **Notes:** Tasks T001–T010 merged to `main`; final telemetry, docs, and regression sweep completed 2025-10-31.
 
+### [x] realtime-agent-instructions
+Move the realtime assistant prompt into a config-managed markdown file and inject it during token
+issuance so guidance never ships with the client bundle.
+- **Priority:** Medium
+- **Dependencies:** ui-overhaul
+- **Notes:** Issue #64 covers this work; tasks T001–T002 finished on branch `feat/64-realtime-instructions-config`.
+
 ---
 
 **Recommended Starting Point:**
