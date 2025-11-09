@@ -26,7 +26,7 @@ Extend the MCP server config schema with an optional boolean `trackResources` de
 ---
 
 ## Task T002: Resource tracker service
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T001
 **Files:**
 - `app/lib/mcp/resource-tracker.ts` (new)

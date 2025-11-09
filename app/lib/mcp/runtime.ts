@@ -1,4 +1,5 @@
 import { McpClientPool } from './client-pool';
+import { McpResourceTracker } from './resource-tracker';
 import { McpServerManager } from './serverManager';
 import { McpToolPolicy } from './tool-policy';
 
@@ -10,6 +11,7 @@ export interface McpRuntime {
 
 let runtime: McpRuntime | null = null;
 let startPromise: Promise<void> | null = null;
+let resourceTracker: McpResourceTracker | null = null;
 
 function createRuntime(): McpRuntime {
   const manager = new McpServerManager();
@@ -26,6 +28,18 @@ export function getMcpRuntime(): McpRuntime {
   return runtime;
 }
 
+export function getMcpResourceTracker(): McpResourceTracker {
+  if (!resourceTracker) {
+    const instance = getMcpRuntime();
+    resourceTracker = new McpResourceTracker({
+      manager: instance.manager,
+      clientPool: instance.clientPool,
+      ensureServersStarted: ensureMcpServersStarted,
+    });
+  }
+  return resourceTracker;
+}
+
 export function ensureMcpServersStarted(): Promise<void> {
   const instance = getMcpRuntime();
   if (!startPromise) {
@@ -38,7 +52,20 @@ export function ensureMcpServersStarted(): Promise<void> {
   return startPromise;
 }
 
+export async function ensureMcpResourceTrackerStarted(): Promise<McpResourceTracker> {
+  const tracker = getMcpResourceTracker();
+  await tracker.start();
+  return tracker;
+}
+
 export function setMcpRuntimeForTesting(next: McpRuntime | null): void {
   runtime = next;
   startPromise = null;
+  resourceTracker = null;
+}
+
+export function setMcpResourceTrackerForTesting(
+  next: McpResourceTracker | null,
+): void {
+  resourceTracker = next;
 }
