@@ -68,10 +68,12 @@ export function ChatClient() {
   const [muted, setMuted] = useState(false);
   const [session, setSession] = useState<RealtimeSession | null>(null);
   const transcriptStore = useMemo(() => new TranscriptStore(), []);
-  const mcpAdapter = useMemo(
-    () => new McpAdapter({ resourceEventsUrl: '/api/mcp/resource-events' }),
-    [],
-  );
+  const mcpAdapter = useMemo(() => {
+    const supportsFetch =
+      typeof window !== 'undefined' && typeof window.fetch === 'function';
+    const resourceEventsUrl = supportsFetch ? '/api/mcp/resource-events' : null;
+    return new McpAdapter({ resourceEventsUrl });
+  }, []);
   const [agent, setAgent] = useState<RealtimeAgent | null>(null);
   const [voiceActivity, setVoiceActivity] = useState<VoiceActivityState>(
     defaultVoiceActivityState,
@@ -251,9 +253,12 @@ export function ChatClient() {
         await mcpAdapter.refreshCatalog();
       } catch (error) {
         if (!cancelled) {
+          console.warn("[mcp-adapter] initial catalog load failed", error);
+        }
+      } finally {
+        if (!cancelled) {
           setToolsInitialized(true);
         }
-        console.warn("[mcp-adapter] initial catalog load failed", error);
       }
     })();
 

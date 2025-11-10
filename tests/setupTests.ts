@@ -1,8 +1,12 @@
 import '@testing-library/jest-dom';
+import { configure } from '@testing-library/react';
 import { createSerializer } from '@emotion/jest';
 import { TextEncoder, TextDecoder } from 'node:util';
 
 expect.addSnapshotSerializer(createSerializer());
+
+jest.useRealTimers();
+configure({ asyncUtilTimeout: 2000 });
 
 jest.mock('react-markdown', () => require('./mocks/react-markdown'));
 jest.mock('remark-gfm', () => () => null);

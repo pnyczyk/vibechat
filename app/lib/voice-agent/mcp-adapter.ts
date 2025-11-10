@@ -319,6 +319,9 @@ export class McpAdapter {
   async refreshCatalog(): Promise<void> {
     try {
       const response = await this.fetchCatalog();
+      if (!response || !Array.isArray(response.tools)) {
+        throw new Error('Catalog response missing tools array');
+      }
       this.tools = response.tools.map((tool) => ({
         id: tool.id,
         name: tool.name,
@@ -335,6 +338,7 @@ export class McpAdapter {
     } catch (error) {
       console.debug('[mcp-adapter] refreshCatalog error', error);
       console.warn('[mcp-adapter] Failed to refresh catalog', error);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
