@@ -66,7 +66,36 @@ export interface McpAdapterOptions {
   fetchCatalog?: CatalogFetcher;
   invokeTool?: ToolInvoker;
   grantedPermissions?: () => string[];
+  resourceEventsUrl?: string | null;
+  resourceEventsFetcher?: (url: string, init?: RequestInit) => Promise<Response>;
+  now?: () => number;
 }
+
+const RESOURCE_EVENTS_URL = '/api/mcp/resource-events';
+const RESOURCE_EVENTS_RETRY_INITIAL_MS = 1_000;
+const RESOURCE_EVENTS_RETRY_MAX_MS = 30_000;
+const RESOURCE_EVENT_HISTORY_LIMIT = 500;
+
+const defaultResourceEventsFetcher = async (
+  url: string,
+  init?: RequestInit,
+) => {
+  if (typeof fetch !== 'function') {
+    throw new Error('fetch is not available for resource event stream');
+  }
+  let resolved: string;
+  try {
+    const base =
+      typeof globalThis.location?.origin === 'string'
+        ? globalThis.location.origin
+        : 'http://localhost:3000';
+    resolved = new URL(url, base).toString();
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to resolve resource events URL: ${url} (${reason})`);
+  }
+  return fetch(resolved, init) as Promise<Response>;
+};
 
 const defaultCatalogFetcher: CatalogFetcher = async () => {
   let response: Response | undefined;
@@ -221,10 +250,34 @@ export class McpAdapter {
   private readonly handler = (event: TransportEvent) =>
     this.handleTransportEvent(event);
 
+  private readonly resourceEventsUrl: string | null;
+
+  private readonly resourceEventsFetcher: (
+    url: string,
+    init?: RequestInit,
+  ) => Promise<Response>;
+
+  private resourceEventsAbortController: AbortController | null = null;
+
+  private resourceEventsTask: Promise<void> | null = null;
+
+  private resourceEventsRetryAttempt = 0;
+
+  private readonly deliveredResourceEvents = new Map<string, number>();
+
+  private readonly now: () => number;
+
   constructor(options: McpAdapterOptions = {}) {
     this.fetchCatalog = options.fetchCatalog ?? defaultCatalogFetcher;
     this.invokeTool = options.invokeTool ?? defaultInvoker;
     this.grantedPermissions = options.grantedPermissions;
+    this.resourceEventsUrl =
+      options.resourceEventsUrl === undefined
+        ? null
+        : options.resourceEventsUrl;
+    this.resourceEventsFetcher =
+      options.resourceEventsFetcher ?? defaultResourceEventsFetcher;
+    this.now = options.now ?? Date.now;
   }
 
   subscribe(listener: Listener): () => void {
@@ -247,6 +300,7 @@ export class McpAdapter {
     this.session = session;
     session.on('transport_event', this.handler);
     await this.refreshCatalog();
+    this.startResourceEvents();
   }
 
   detach(): void {
@@ -255,6 +309,7 @@ export class McpAdapter {
     }
     this.session.off('transport_event', this.handler);
     this.session = null;
+    this.stopResourceEvents();
   }
 
   processTransportEventForTesting(event: TransportEvent): void {
@@ -264,6 +319,9 @@ export class McpAdapter {
   async refreshCatalog(): Promise<void> {
     try {
       const response = await this.fetchCatalog();
+      if (!response || !Array.isArray(response.tools)) {
+        throw new Error('Catalog response missing tools array');
+      }
       this.tools = response.tools.map((tool) => ({
         id: tool.id,
         name: tool.name,
@@ -280,6 +338,7 @@ export class McpAdapter {
     } catch (error) {
       console.debug('[mcp-adapter] refreshCatalog error', error);
       console.warn('[mcp-adapter] Failed to refresh catalog', error);
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -401,6 +460,199 @@ export class McpAdapter {
     } catch (error) {
       console.warn('[mcp-adapter] Failed to emit tool result', error);
     }
+  }
+
+  private startResourceEvents(): void {
+    if (this.resourceEventsTask || !this.session || !this.resourceEventsUrl) {
+      return;
+    }
+    const controller = new AbortController();
+    this.resourceEventsAbortController = controller;
+    this.resourceEventsTask = this.consumeResourceEvents(controller.signal).finally(
+      () => {
+        if (this.resourceEventsAbortController === controller) {
+          this.resourceEventsAbortController = null;
+        }
+        if (this.resourceEventsTask && this.resourceEventsAbortController === null) {
+          this.resourceEventsTask = null;
+        }
+      },
+    );
+  }
+
+  private stopResourceEvents(): void {
+    if (this.resourceEventsAbortController) {
+      this.resourceEventsAbortController.abort();
+      this.resourceEventsAbortController = null;
+    }
+    this.resourceEventsTask = null;
+    this.resourceEventsRetryAttempt = 0;
+  }
+
+  private async consumeResourceEvents(signal: AbortSignal): Promise<void> {
+    while (!signal.aborted) {
+      try {
+        await this.openResourceEventsStream(signal);
+        this.resourceEventsRetryAttempt = 0;
+      } catch (error) {
+        if (signal.aborted) {
+          break;
+        }
+        const delayMs = Math.min(
+          RESOURCE_EVENTS_RETRY_INITIAL_MS * 2 ** this.resourceEventsRetryAttempt,
+          RESOURCE_EVENTS_RETRY_MAX_MS,
+        );
+        this.resourceEventsRetryAttempt += 1;
+        console.warn('[mcp-adapter] Resource event stream error', error);
+        await this.delay(delayMs, signal);
+      }
+    }
+  }
+
+  private async openResourceEventsStream(signal: AbortSignal): Promise<void> {
+    if (!this.resourceEventsUrl) {
+      return;
+    }
+
+    const response = await this.resourceEventsFetcher(this.resourceEventsUrl, {
+      headers: {
+        Accept: 'text/event-stream',
+      },
+      signal,
+    });
+
+    if (!response || typeof response.ok !== 'boolean' || !response.ok || !response.body) {
+      throw new Error('Failed to open resource events stream');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (!signal.aborted) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+        for (const part of parts) {
+          if (!part.trim() || part.startsWith(':')) {
+            continue;
+          }
+          const dataLines = part
+            .split('\n')
+            .filter((line) => line.startsWith('data: '))
+            .map((line) => line.slice(6))
+            .join('');
+          if (!dataLines) {
+            continue;
+          }
+          try {
+            const payload = JSON.parse(dataLines) as Record<string, unknown>;
+            this.handleResourceEventPayload(payload);
+          } catch (error) {
+            console.warn('[mcp-adapter] Failed to parse resource SSE payload', error);
+          }
+        }
+      }
+    } finally {
+      if (typeof reader.cancel === 'function') {
+        try {
+          await reader.cancel();
+        } catch (error) {
+          console.debug('[mcp-adapter] Failed to cancel resource stream reader', error);
+        }
+      }
+    }
+  }
+
+  private handleResourceEventPayload(payload: Record<string, unknown>): void {
+    const type = typeof payload.type === 'string' ? payload.type : '';
+    if (type !== 'resource_update') {
+      return;
+    }
+    const serverId = typeof payload.serverId === 'string' ? payload.serverId : null;
+    const resourceUri = typeof payload.resourceUri === 'string' ? payload.resourceUri : null;
+    if (!serverId || !resourceUri) {
+      return;
+    }
+    const timestampValue =
+      typeof payload.timestamp === 'number'
+        ? payload.timestamp
+        : typeof payload.timestamp === 'string'
+          ? Date.parse(payload.timestamp)
+          : this.now();
+    const timestamp = Number.isFinite(timestampValue) ? timestampValue : this.now();
+    this.handleResourceUpdateEvent(serverId, resourceUri, timestamp);
+  }
+
+  private handleResourceUpdateEvent(
+    serverId: string,
+    resourceUri: string,
+    timestamp: number,
+  ): void {
+    const key = `${serverId}::${resourceUri}`;
+    const lastTimestamp = this.deliveredResourceEvents.get(key);
+    if (lastTimestamp && lastTimestamp >= timestamp) {
+      return;
+    }
+    if (this.deliveredResourceEvents.size >= RESOURCE_EVENT_HISTORY_LIMIT) {
+      this.deliveredResourceEvents.clear();
+    }
+    this.deliveredResourceEvents.set(key, timestamp);
+    this.emitResourceUpdateMessage(serverId, resourceUri, timestamp);
+  }
+
+  private emitResourceUpdateMessage(
+    serverId: string,
+    resourceUri: string,
+    timestamp: number,
+  ): void {
+    const session = this.session;
+    if (!session?.transport?.sendEvent) {
+      return;
+    }
+    const isoTimestamp = new Date(timestamp).toISOString();
+    const text = `Resource ${resourceUri} updated for MCP server ${serverId} at ${isoTimestamp}`;
+    try {
+      session.transport.sendEvent({
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text,
+            },
+          ],
+        },
+      } as unknown as Record<string, unknown>);
+      session.transport.sendEvent({ type: 'response.create' } as Record<string, unknown>);
+    } catch (error) {
+      console.warn('[mcp-adapter] Failed to emit resource update message', error);
+    }
+  }
+
+  private async delay(ms: number, signal: AbortSignal): Promise<void> {
+    if (signal.aborted) {
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        signal.removeEventListener('abort', onAbort);
+        resolve();
+      }, ms);
+      const onAbort = () => {
+        clearTimeout(timer);
+        signal.removeEventListener('abort', onAbort);
+        resolve();
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
   }
 
   private updateSessionTools(): void {
