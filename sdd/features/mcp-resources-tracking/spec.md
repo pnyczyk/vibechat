@@ -41,7 +41,7 @@ Upcoming voice workflows depend on MCP-hosted instruction packs. Without automat
 
 **Acceptance Criteria:**
 - [ ] When a subscribed resource fires `notifications/resources/updated`, VibeChat emits a lightweight event containing `serverId`, `resourceUri`, and a timestamp within 3 seconds of receipt
-- [ ] The realtime adapter receives the event and decides whether/when to fetch contents (e.g., via MCP tools) without blocking the original notification path
+- [ ] The realtime adapter receives the event and immediately injects a transcript message formatted as `Resource <URI> updated for MCP server <serverId> at <timestamp>` (timestamp in ISO 8601) without blocking the notification path
 - [ ] Updates are also exposed via a server-sent events (SSE) endpoint so UI components can reflect resource activity
 
 ## Success Metrics

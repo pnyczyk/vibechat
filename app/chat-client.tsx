@@ -68,7 +68,10 @@ export function ChatClient() {
   const [muted, setMuted] = useState(false);
   const [session, setSession] = useState<RealtimeSession | null>(null);
   const transcriptStore = useMemo(() => new TranscriptStore(), []);
-  const mcpAdapter = useMemo(() => new McpAdapter(), []);
+  const mcpAdapter = useMemo(
+    () => new McpAdapter({ resourceEventsUrl: '/api/mcp/resource-events' }),
+    [],
+  );
   const [agent, setAgent] = useState<RealtimeAgent | null>(null);
   const [voiceActivity, setVoiceActivity] = useState<VoiceActivityState>(
     defaultVoiceActivityState,

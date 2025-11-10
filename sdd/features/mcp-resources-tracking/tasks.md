@@ -72,21 +72,20 @@ Expose tracker events via a server-sent events endpoint so UI/clients can observ
 ---
 
 ## Task T004: Realtime adapter & agent messaging
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002, T003
 **Files:**
 - `app/lib/voice-agent/mcp-adapter.ts`
 - `tests/chat/mcp-resource-updates.test.tsx`
 
 ### Description
-Wire the `McpAdapter` to the SSE feed, surface lightweight resource notifications to the realtime session, and optionally fetch/send full contents when needed. Maintain retry/backoff on SSE failures.
+Wire the `McpAdapter` to the SSE feed, surface lightweight resource notifications to the realtime session, and emit the standardized message string (`Resource <URI> updated for MCP server <serverId> at <timestamp>`). Maintain retry/backoff on SSE failures.
 
 ### Acceptance Criteria
 - Adapter opens SSE when a session attaches and closes on detach/unmount
-- Adapter receives events within 3s and decides case-by-case whether to call MCP tools (e.g., `resources/read`) before surfacing updates
-- When the adapter chooses to fetch contents, it logs/delivers them using existing transcript utilities; otherwise it stores the URI for later use
-- Duplicate updates ignored if same URI + checksum already delivered
-- Jest tests cover SSE consumption, decision logic, and retry behavior
+- Adapter receives events within 3s and injects the transcript message `Resource <URI> updated for MCP server <serverId> at <timestamp>` (ISO timestamp) via existing message utilities
+- Duplicate updates ignored if same URI + timestamp already delivered
+- Jest tests cover SSE consumption, formatting, dedupe, and retry behavior
 
 ### Implementation Notes
 - Reference spec Story 3
