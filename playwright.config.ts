@@ -22,6 +22,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     env: {
       NEXT_PUBLIC_USE_REALTIMEMOCK: "1",
+      NEXT_PUBLIC_ENABLE_TELEMETRY: "1",
     },
     stdout: "pipe",
     stderr: "pipe",
