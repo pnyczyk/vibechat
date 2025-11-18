@@ -113,6 +113,8 @@ Set `NEXT_PUBLIC_ENABLE_TELEMETRY=1` (and optionally `MCP_ENABLE_TELEMETRY=1`) t
 - Playwright specs reside in `tests/e2e/`; `tests/e2e/mcp-tools.spec.ts` exercises catalog hydration and a mocked invocation end-to-end.
 - `tests/e2e/mcp-resource-tracking.spec.ts` keeps the SSE bridge honest by simulating a tracker
   event and asserting the transcript message delivery once a realtime session connects.
+- `tests/e2e/main-view-markdown.spec.ts` drives the `show_markdown` tool, validates tables + math,
+  and asserts telemetry render/engagement events fire exactly once under Fast 3G conditions.
 - Run `npm run test:e2e` from a second terminal while the dev server is running.
 
 ## Security Notes

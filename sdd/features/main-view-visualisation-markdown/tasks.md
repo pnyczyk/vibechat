@@ -78,7 +78,7 @@ plus metrics expectations for the Markdown viewer.
 ---
 
 ## Task T004: E2E Markdown Flow
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T003
 **Files:**
 - `tests/e2e/main-view-markdown.spec.ts`
