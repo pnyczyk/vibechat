@@ -107,6 +107,11 @@ export function ChatClient() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserCleanupRef = useRef<(() => void) | null>(null);
   const isMountedRef = useRef(true);
+  const markdownLoadStartRef = useRef<number | null>(null);
+  const lastMarkdownRenderSignatureRef = useRef<string | null>(null);
+  const markdownEngagementTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const markdownEngagementDocRef = useRef<string | null>(null);
+  const markdownEngagementStartRef = useRef<number | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -114,6 +119,41 @@ export function ChatClient() {
       isMountedRef.current = false;
     };
   }, []);
+
+  const clearMarkdownEngagementTimer = useCallback(() => {
+    if (markdownEngagementTimerRef.current) {
+      clearTimeout(markdownEngagementTimerRef.current);
+      markdownEngagementTimerRef.current = null;
+    }
+    markdownEngagementDocRef.current = null;
+    markdownEngagementStartRef.current = null;
+  }, []);
+
+  const scheduleMarkdownEngagement = useCallback(
+    (documentId: string) => {
+      clearMarkdownEngagementTimer();
+      markdownEngagementDocRef.current = documentId;
+      markdownEngagementStartRef.current = Date.now();
+      markdownEngagementTimerRef.current = setTimeout(() => {
+        const startedAt = markdownEngagementStartRef.current ?? Date.now();
+        const durationMs = Math.max(0, Date.now() - startedAt);
+        logTelemetry("session_markdown_engagement", {
+          documentId,
+          durationMs,
+        });
+        markdownEngagementTimerRef.current = null;
+        markdownEngagementDocRef.current = null;
+        markdownEngagementStartRef.current = null;
+      }, 5_000);
+    },
+    [clearMarkdownEngagementTimer],
+  );
+
+  useEffect(() => {
+    return () => {
+      clearMarkdownEngagementTimer();
+    };
+  }, [clearMarkdownEngagementTimer]);
 
   const showMarkdownTool = useMemo(() => {
     const realtimeTool = createShowMarkdownTool(markdownStore);
@@ -124,8 +164,12 @@ export function ChatClient() {
         if (isMountedRef.current) {
           setIsMarkdownLoading(true);
         }
+        markdownLoadStartRef.current = Date.now();
         try {
           return await originalExecute(input);
+        } catch (error) {
+          markdownLoadStartRef.current = null;
+          throw error;
         } finally {
           if (isMountedRef.current) {
             setIsMarkdownLoading(false);
@@ -314,13 +358,38 @@ export function ChatClient() {
   useEffect(() => {
     const unsubscribe = markdownStore.subscribe((document) => {
       setMarkdownDocument(document);
-      if (!document && isMountedRef.current) {
+      if (!document) {
+        if (isMountedRef.current) {
+          setIsMarkdownLoading(false);
+        }
+        lastMarkdownRenderSignatureRef.current = null;
+        clearMarkdownEngagementTimer();
+        return;
+      }
+
+      if (isMountedRef.current) {
         setIsMarkdownLoading(false);
       }
+
+      const now = Date.now();
+      const startedAt = markdownLoadStartRef.current ?? document.updatedAt ?? now;
+      const latencyMs = Math.max(0, now - startedAt);
+      markdownLoadStartRef.current = null;
+      const signature = `${document.id}:${document.updatedAt}`;
+      if (lastMarkdownRenderSignatureRef.current !== signature) {
+        lastMarkdownRenderSignatureRef.current = signature;
+        logTelemetry("session_markdown_rendered", {
+          documentId: document.id,
+          title: document.title ?? null,
+          bytes: document.bytes,
+          latencyMs,
+        });
+      }
+      scheduleMarkdownEngagement(document.id);
     });
 
     return unsubscribe;
-  }, [markdownStore]);
+  }, [markdownStore, scheduleMarkdownEngagement, clearMarkdownEngagementTimer]);
 
   useEffect(() => {
     let isFirstSync = true;
