@@ -52,7 +52,7 @@ tokens, and slot the viewer into the chat canvas without disrupting transcript o
 ---
 
 ## Task T003: Instrument Telemetry And Accessibility
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T002
 **Files:**
 - `app/lib/analytics.ts`

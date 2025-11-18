@@ -22,6 +22,16 @@ export type TelemetryEvents = {
     state: "waiting" | "idle" | "active";
     hasMetrics: boolean;
   };
+  session_markdown_rendered: {
+    documentId: string;
+    title: string | null;
+    bytes: number;
+    latencyMs: number;
+  };
+  session_markdown_engagement: {
+    documentId: string;
+    durationMs: number;
+  };
 };
 
 export type TelemetryEventName = keyof TelemetryEvents;

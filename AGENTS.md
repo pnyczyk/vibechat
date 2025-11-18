@@ -67,7 +67,9 @@ Store the prompts under `~/.codex/prompts/` so `/prompts:sdd-*` commands can ref
 
 ### Telemetry
 - Toggle runtime telemetry with `NEXT_PUBLIC_ENABLE_TELEMETRY=1`; default is disabled in dev, test, and CI.
-- Core events tracked: `session_entry_started`, `session_connect_success` (with `entryLatencyMs`), `session_theme_selected`, `voice_activity_transition`, transcript actions, and mute toggles.
+- Core events tracked: `session_entry_started`, `session_connect_success` (with `entryLatencyMs`),
+  `session_theme_selected`, `voice_activity_transition`, transcript actions, mute toggles, and
+  markdown viewer events (`session_markdown_rendered` + `session_markdown_engagement`).
 - When filing support tickets for connect latency or entry confusion, include the `entryLatencyMs` metric and note whether the user toggled themes (`theme-selected`) so analytics can correlate UX pain points.
 
 ## Architecture Principles

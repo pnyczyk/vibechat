@@ -102,6 +102,10 @@ Example entry with tracking enabled:
 ## Telemetry
 
 Set `NEXT_PUBLIC_ENABLE_TELEMETRY=1` (and optionally `MCP_ENABLE_TELEMETRY=1`) to stream structured events for catalog handshakes, tool invocations, and admin actions. During tests the telemetry handler is overridden to avoid polluting console output.
+- Markdown viewer instrumentation publishes `session_markdown_rendered` (document id, title, bytes,
+  latency in ms) whenever the `show_markdown` tool updates the canvas and
+  `session_markdown_engagement` once a document stays open for ≥5 seconds. See
+  `tests/chat/markdown-telemetry.test.tsx` for reference expectations.
 
 ## Testing
 
