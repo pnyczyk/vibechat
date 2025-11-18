@@ -72,3 +72,13 @@ What external factors does this feature depend on?
 ### Assumptions
 - Resource contents are predominantly UTF-8 text; binary payloads can be summarized without degrading the agent experience
 - Realtime sessions already handle injected system messages without extra UX changes
+
+## Implementation Notes
+
+- Tasks T001–T004 ship the config flag, tracker, SSE endpoint, and realtime adapter wiring. Task
+  T005 closes the loop with documentation updates (README + AGENTS) and the Playwright spec
+  `tests/e2e/mcp-resource-tracking.spec.ts` that simulates a tracker event over
+  `/api/mcp/resource-events` and asserts the transcript message is delivered once a session is
+  connected.
+- Keep `sdd/features/mcp-resources-tracking/tasks.md` in sync with delivery status; Task T005 is now
+  marked `Completed` so regressions should update the tracker accordingly.

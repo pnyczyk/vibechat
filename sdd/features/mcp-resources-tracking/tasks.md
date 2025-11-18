@@ -94,15 +94,16 @@ Wire the `McpAdapter` to the SSE feed, surface lightweight resource notification
 ---
 
 ## Task T005: Documentation & end-to-end validation
-**Status:** Pending
+**Status:** Completed
 **Dependencies:** T001–T004
 **Files:**
 - `README.md`, `AGENTS.md`
 - `sdd/features/mcp-resources-tracking/spec.md`
-- `tests/e2e/mcp-resource-tracking.spec.ts` (new)
+- `tests/e2e/mcp-resource-tracking.spec.ts`
 
 ### Description
-Update project docs and SDD materials with tracker details plus add an end-to-end Playwright (or Jest integration) scenario exercising the full flow from config flag to realtime message delivery.
+Update project docs and SDD materials with tracker details plus add an end-to-end Playwright (or
+Jest integration) scenario exercising the full flow from config flag to realtime message delivery.
 
 ### Acceptance Criteria
 - Docs explain setup steps, telemetry expectations, and troubleshooting

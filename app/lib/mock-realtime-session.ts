@@ -75,6 +75,12 @@ export class MockRealtimeSession {
 
   muted: boolean | null = false;
 
+  transport = {
+    sendEvent: (payload: Record<string, unknown>) => {
+      this.handleTransportSendEvent(payload);
+    },
+  };
+
   private listeners = new Map<string, Set<Listener>>();
 
   private closed = false;
@@ -179,6 +185,48 @@ export class MockRealtimeSession {
   private emitHistory(): void {
     this.emit("history_added", this.history);
     this.emit("history_updated", this.history);
+  }
+
+  private handleTransportSendEvent(event: Record<string, unknown>): void {
+    if (this.closed) {
+      return;
+    }
+    const type = typeof event.type === "string" ? event.type : "";
+    if (type !== "conversation.item.create") {
+      return;
+    }
+
+    const message = (event as { item?: Record<string, unknown> }).item;
+    if (!message || message.type !== "message") {
+      return;
+    }
+
+    const role = message.role === "assistant" || message.role === "user"
+      ? message.role
+      : null;
+    if (!role) {
+      return;
+    }
+
+    const content = Array.isArray(message.content) ? message.content : [];
+    const text = content
+      .map((part) =>
+        part && typeof part === "object" && "text" in part && typeof part.text === "string"
+          ? part.text.trim()
+          : "",
+      )
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    if (!text) {
+      return;
+    }
+
+    const itemId = createId(role);
+    const historyItem = createMessageItem(itemId, role, text);
+    this.history = [...this.history, historyItem];
+    this.emitHistory();
   }
 
   private emit(event: string, ...args: unknown[]): void {
