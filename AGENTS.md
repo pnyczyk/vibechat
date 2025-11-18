@@ -149,7 +149,30 @@ Store the prompts under `~/.codex/prompts/` so `/prompts:sdd-*` commands can ref
 ## MCP Tools
 
 - Server side catalog aggregation lives in `app/lib/mcp/catalog-service.ts`; it bootstraps the shared `McpServerManager` and caches descriptors for 5 seconds while filtering revoked tools through `McpToolPolicy`.
-- Servers opt into upcoming MCP resource tracking by setting `trackResources=true` in `config/mcp-servers.json`. Leave the flag at its default `false` unless the server implements `resources/list`, `resources/subscribe`, and `resources/read`; the runtime keeps the flag on `McpServerDefinition` snapshots so trackers can subscribe immediately after launch or reload.
+- Servers opt into MCP resource tracking by setting `trackResources=true` in
+  `config/mcp-servers.json`. Enable it only for servers that implement `resources/list`,
+  `resources/subscribe`, and
+  `resources/read`. The runtime keeps the flag on `McpServerDefinition` snapshots so trackers can
+  subscribe within ~5 seconds of launch or reload. When toggling the flag, restart the dev server
+  (or redeploy) and watch `/tmp/vibechat-dev.log` for `[mcp-resource-tracker]` entries that confirm
+  subscriptions.
+- The SSE feed at `GET /api/mcp/resource-events` rebroadcasts `resource_update`, `resource_error`,
+  and `tracker_stopped` events to clients. Always send `Accept: text/event-stream`; the stream
+  begins with a `retry:` hint plus a `{ type: "handshake", status: "ready" }` payload. Only
+  identifiers (`serverId`, `resourceUri`, `timestamp`, optional `reason/error`) are streamed so UI
+  layers can fetch contents directly from the MCP server. Use `curl -N -H "Accept:
+  text/event-stream" http://localhost:3000/api/mcp/resource-events` to smoke test in dev.
+- `McpAdapter` consumes that SSE feed once a realtime session attaches and injects transcript
+  messages formatted as `Resource <URI> updated for MCP server <serverId> at <timestamp>`. Duplicate
+  `(serverId, resourceUri)` events with the same timestamp are ignored to prevent spam; if you do
+  not see a transcript entry, ensure the event timestamp advances.
+- Tracker telemetry fires when `NEXT_PUBLIC_ENABLE_TELEMETRY=1` or `MCP_ENABLE_TELEMETRY=1`. Look
+  for `resource_tracker` events (e.g., `event=refresh_failed`, `retry_scheduled`, `unsupported`) in
+  the console/logs before escalating support tickets.
+- Playwright coverage lives in `tests/e2e/mcp-resource-tracking.spec.ts`, which simulates a tracker
+  event over the SSE endpoint and asserts that the transcript reflects the update once the mock
+  realtime session is connected. Keep this spec updated whenever the SSE payload or transcript
+  rendering changes and wire it into CI via `npm run test:e2e`.
 - Tool invocation requests flow through `app/lib/mcp/invocation-service.ts` and the `POST /api/mcp/invoke` route where payloads are schema-checked, latency is logged, and streaming updates emit SSE frames back to the client. Telemetry events are recorded for every outcome.
 - Admin automation runs via `POST /api/mcp/admin` supporting `revoke`, `restore`, and `reload-config`; requests must include `Authorization: Bearer $MCP_ADMIN_TOKEN` and will cancel in-flight invocations plus invalidate the catalog cache.
 - Client hydration is handled by `McpAdapter` in `app/lib/voice-agent/mcp-adapter.ts`. The adapter fetches the catalog on session attach, pushes hosted MCP tool definitions into the realtime session, listens for `mcp_tool_call` transport events, and mirrors progress into UI state.

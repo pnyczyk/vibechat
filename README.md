@@ -28,8 +28,16 @@ The development server runs on <http://localhost:3000>. Playwright E2E specs exp
 
 ## MCP Integration
 
-- **Server configuration:** Define MCP hosts in `config/mcp-servers.json`. Each entry includes `id`, `command`, `args`, an optional `enabled` flag, and the `trackResources` toggle (default `false`). Set `trackResources=true` only for servers that expose `resources/list`, `resources/subscribe`, and `resources/read`; the resource tracker will subscribe to their feeds within ~5 seconds of startup once the service is enabled.
-- **Resource updates:** When tracking is enabled, VibeChat mirrors `notifications/resources/*` events into realtime sessions and SSE consumers (see feature `mcp-resources-tracking`). Servers without resource support should keep the flag `false` to avoid unnecessary subscriptions.
+### Server configuration
+
+- Define MCP hosts in `config/mcp-servers.json`. Each entry includes `id`, `command`, `args`, an
+  optional `enabled` flag, and the `trackResources` toggle (default `false`).
+- Set `trackResources=true` only for servers that expose `resources/list`, `resources/subscribe`,
+  and `resources/read`. The tracker kicks off a list + subscribe cycle within ~5 seconds of
+  process start and tears it down the moment the flag is removed or the server stops.
+- Restart `npm run dev` (or deploy) after toggling the flag so the process registry reloads
+  commands. Watch `/tmp/vibechat-dev.log` for `[mcp-resource-tracker]` lines confirming
+  subscriptions.
 
 Example entry with tracking enabled:
 
@@ -43,10 +51,53 @@ Example entry with tracking enabled:
   "trackResources": true
 }
 ```
-- **Catalog service:** `GET /api/mcp/catalog` emits a cached snapshot of active tools enriched with permission scopes. Failures and cache hits emit telemetry via `recordCatalogHandshake`.
-- **Invocation pipeline:** `POST /api/mcp/invoke` validates payloads, streams SSE updates, enforces permission scopes, and records latency metrics. Clients can cancel invocations with `DELETE /api/mcp/invoke?invocationId=<id>`.
-- **Admin controls:** `POST /api/mcp/admin` accepts `revoke`, `restore`, or `reload-config` actions. Requests must include `Authorization: Bearer $MCP_ADMIN_TOKEN`. Revocations immediately cancel active invocations and flush the catalog cache.
-- **Client adapter:** `app/lib/voice-agent/mcp-adapter.ts` hydrates the catalog when a realtime session attaches, registers hosted MCP tool definitions, listens for `mcp_tool_call` transport events, and mirrors progress into the UI (see the banner rendered by `ChatClient`).
+
+### Resource tracker & SSE feed
+
+- The tracker emits `resource_update` events whenever an opted-in server sends
+  `notifications/resources/updated`. Updates fan out to the realtime session (via `McpAdapter`) and
+  to a dedicated SSE endpoint at `GET /api/mcp/resource-events`.
+- SSE semantics:
+  - Clients **must** send `Accept: text/event-stream`. Every stream begins with `retry: <ms>` plus a
+    `{ "type": "handshake", "status": "ready" }` payload.
+  - Event payloads include only `serverId`, `resourceUri`, `timestamp`, and optional
+    `reason`/`error` fields for failures. Fetch contents directly from the MCP server if you need
+    the resource body.
+  - Example probe:
+
+    ```bash
+    curl -N -H "Accept: text/event-stream" \
+      http://localhost:3000/api/mcp/resource-events
+    ```
+
+- Telemetry: when `NEXT_PUBLIC_ENABLE_TELEMETRY=1` or `MCP_ENABLE_TELEMETRY=1`, the tracker logs
+  `resource_tracker` events to help correlate refresh failures (`event=refresh_failed`), retries, or
+  unsupported servers.
+- Troubleshooting checklist:
+  1. SSE returns 500 → check `/tmp/vibechat-dev.log` for tracker startup errors and confirm the
+     server exposes `resources/*` methods.
+  2. No transcript message → ensure the voice session is connected (SSE attaches only after
+     `ChatClient` attaches to a session) and confirm the resource URI differs from previously
+     delivered timestamps (events with the same timestamp are deduped).
+  3. High churn → set `trackResources` to `false`; the tracker unsubscribes within 5 seconds.
+
+- Playwright coverage: `tests/e2e/mcp-resource-tracking.spec.ts` validates that SSE updates reach
+  the transcript when a realtime session is active.
+
+### Catalog, invocation, and admin APIs
+
+- **Catalog service:** `GET /api/mcp/catalog` emits a cached snapshot of active tools enriched with
+  permission scopes. Failures and cache hits emit telemetry via `recordCatalogHandshake`.
+- **Invocation pipeline:** `POST /api/mcp/invoke` validates payloads, streams SSE updates, enforces
+  permission scopes, and records latency metrics. Clients can cancel invocations with
+  `DELETE /api/mcp/invoke?invocationId=<id>`.
+- **Admin controls:** `POST /api/mcp/admin` accepts `revoke`, `restore`, or `reload-config`
+  actions. Requests must include `Authorization: Bearer $MCP_ADMIN_TOKEN`. Revocations immediately
+  cancel active invocations and flush the catalog cache.
+- **Client adapter:** `app/lib/voice-agent/mcp-adapter.ts` hydrates the catalog when a realtime
+  session attaches, registers hosted MCP tool definitions, listens for `mcp_tool_call` transport
+  events, consumes the resource SSE feed, and mirrors progress into the UI (see the summary + tool
+  runs rendered by `ChatClient`).
 
 ## Telemetry
 
@@ -56,6 +107,8 @@ Set `NEXT_PUBLIC_ENABLE_TELEMETRY=1` (and optionally `MCP_ENABLE_TELEMETRY=1`) t
 
 - Jest specs live under `tests/` (see `tests/mcp/` for MCP coverage).
 - Playwright specs reside in `tests/e2e/`; `tests/e2e/mcp-tools.spec.ts` exercises catalog hydration and a mocked invocation end-to-end.
+- `tests/e2e/mcp-resource-tracking.spec.ts` keeps the SSE bridge honest by simulating a tracker
+  event and asserting the transcript message delivery once a realtime session connects.
 - Run `npm run test:e2e` from a second terminal while the dev server is running.
 
 ## Security Notes
