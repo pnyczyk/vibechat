@@ -18,9 +18,9 @@ Improving usability unlocks upcoming agent tooling and ensures early users exper
 **So that** I can quickly join or leave without digging through menus
 
 **Acceptance Criteria:**
-- [ ] Icon stack shows a connect state when disconnected and a disconnect state when live using MUI iconography
-- [ ] Activating the control triggers backend connect/disconnect actions with success feedback within 1s
-- [ ] Error states display an inline toast message without collapsing the icon layout
+- [x] Icon stack shows a connect state when disconnected and a disconnect state when live using MUI iconography
+- [x] Activating the control triggers backend connect/disconnect actions with success feedback within 1s
+- [x] Error states display an inline toast message without collapsing the icon layout
 
 ### Story 2: Ongoing Voice Exchange
 **As a** voice chat participant
@@ -28,9 +28,9 @@ Improving usability unlocks upcoming agent tooling and ensures early users exper
 **So that** the conversation feels natural and uninterrupted
 
 **Acceptance Criteria:**
-- [ ] Voice area remains dominant whitespace with no modal dialogs during active sessions
-- [ ] Live status indicator persists while connected and muted state is off
-- [ ] A bottom-right MUI indicator renders AI voice activity levels with responsive meter animation during playback
+- [x] Voice area remains dominant whitespace with no modal dialogs during active sessions
+- [x] Live status indicator persists while connected and muted state is off
+- [x] A bottom-right MUI indicator renders AI voice activity levels with responsive meter animation during playback
 
 ### Story 3: Mic Control
 **As a** voice chat participant
@@ -38,9 +38,9 @@ Improving usability unlocks upcoming agent tooling and ensures early users exper
 **So that** I can manage audio privacy without stopping the session
 
 **Acceptance Criteria:**
-- [ ] Mute/unmute icon displays current state via distinct MUI icons and is clickable during agent speech
-- [ ] Muting locally stops outgoing audio stream within 250ms
-- [ ] Attempting to speak while muted surfaces a subtle reminder and keeps the session connected
+- [x] Mute/unmute icon displays current state via distinct MUI icons and is clickable during agent speech
+- [x] Muting locally stops outgoing audio stream within 250ms
+- [x] Attempting to speak while muted surfaces a subtle reminder and keeps the session connected
 
 ### Story 4: Transcript & Text Input
 **As a** voice chat participant
@@ -48,9 +48,9 @@ Improving usability unlocks upcoming agent tooling and ensures early users exper
 **So that** I can review history and continue the conversation silently
 
 **Acceptance Criteria:**
-- [ ] Drawer slides in from the right, consumes no more than 30% viewport width, and overlays content with 80% opacity background using Material UI components
-- [ ] Transcript lists the current session conversation in chronological order with newest entries visible without scrolling
-- [ ] Text input in the drawer sends messages through the existing conversation pipeline with delivery confirmation
+- [x] Drawer slides in from the right, consumes no more than 30% viewport width, and overlays content with 80% opacity background using Material UI components
+- [x] Transcript lists the current session conversation in chronological order with newest entries visible without scrolling
+- [x] Text input in the drawer sends messages through the existing conversation pipeline with delivery confirmation
 
 ## Success Metrics
 How will we measure if this feature is successful?

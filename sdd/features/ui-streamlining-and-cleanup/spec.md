@@ -18,9 +18,9 @@ Aligning the interface with the streamlined interaction model before shipping ne
 **So that** I stay focused on the session without distracting chrome
 
 **Acceptance Criteria:**
-- [ ] Root layout stretches to 100% viewport width/height without scroll bars on supported breakpoints
-- [ ] Background canvas subtly dims when entry modal states are active and returns to neutral once connected
-- [ ] No legacy padding gutters or placeholder panels remain visible on load
+- [x] Root layout stretches to 100% viewport width/height without scroll bars on supported breakpoints
+- [x] Background canvas subtly dims when entry modal states are active and returns to neutral once connected
+- [x] No legacy padding gutters or placeholder panels remain visible on load
 
 ### Story 2: Minimal Edge-Aligned Controls
 **As a** voice chat participant
@@ -38,9 +38,9 @@ Aligning the interface with the streamlined interaction model before shipping ne
 **So that** the connect action is obvious and immediate
 
 **Acceptance Criteria:**
-- [ ] Initial state shows a large lightning icon centered on the canvas with a dimmed backdrop
-- [ ] Clicking the icon provisions a realtime session and transitions to the standard control rail within 1s
-- [ ] Once connected, the lightning icon is replaced by the power toggle in the rail, and disconnecting returns to the entry state
+- [x] Initial state shows a large lightning icon centered on the canvas with a dimmed backdrop
+- [x] Clicking the icon provisions a realtime session and transitions to the standard control rail within 1s
+- [x] Once connected, the lightning icon is replaced by the power toggle in the rail, and disconnecting returns to the entry state
 
 ### Story 4: Voice Activity Indicator
 **As a** voice chat participant
@@ -59,9 +59,9 @@ Aligning the interface with the streamlined interaction model before shipping ne
 **So that** the interface adapts to my environment without hunting through menus
 
 **Acceptance Criteria:**
-- [ ] Sun/moon (or equivalent) icon toggles Material UI theme instantly with smooth transition
-- [ ] Selected theme persists for the session and across reload within the same browser
-- [ ] Theme toggle respects dimmed entry state and does not interrupt ongoing audio playback
+- [x] Sun/moon (or equivalent) icon toggles Material UI theme instantly with smooth transition
+- [x] Selected theme persists for the session and across reload within the same browser
+- [x] Theme toggle respects dimmed entry state and does not interrupt ongoing audio playback
 
 ## Success Metrics
 How will we measure if this feature is successful?

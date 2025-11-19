@@ -18,10 +18,10 @@ Upcoming voice workflows depend on MCP-hosted instruction packs. Without automat
 **So that** VibeChat only spends bandwidth on relevant feeds and stays within capabilities
 
 **Acceptance Criteria:**
-- [ ] `config/mcp-servers.json` supports `trackResources` (default `false`) and rejects non-boolean values
-- [ ] Enabling the flag triggers `resources/list` + `resources/subscribe` for every resource exposed by that server within 5 seconds of process start
-- [ ] Removing or disabling the flag stops any active subscriptions within 5 seconds of reload/stop
-- [ ] Servers that lack MCP `resources` capability log a warning and skip tracking without crashing the manager
+- [x] `config/mcp-servers.json` supports `trackResources` (default `false`) and rejects non-boolean values
+- [x] Enabling the flag triggers `resources/list` + `resources/subscribe` for every resource exposed by that server within 5 seconds of process start
+- [x] Removing or disabling the flag stops any active subscriptions within 5 seconds of reload/stop
+- [x] Servers that lack MCP `resources` capability log a warning and skip tracking without crashing the manager
 
 ### Story 2: Consistent subscription lifecycle
 **As a** platform operator
@@ -29,10 +29,10 @@ Upcoming voice workflows depend on MCP-hosted instruction packs. Without automat
 **So that** the tracker never emits stale or missing updates
 
 **Acceptance Criteria:**
-- [ ] `notifications/resources/list_changed` triggers a fresh list+subscribe cycle and replaces previous subscriptions atomically
-- [ ] Tracker retries transient failures (e.g., network) with exponential backoff capped at 30s and surfaces errors via telemetry
-- [ ] Duplicate notifications for the same resource URI within 2 seconds are de-duped to a single downstream update event
-- [ ] Tracker survives MCP server restarts by re-establishing subscriptions without manual intervention
+- [x] `notifications/resources/list_changed` triggers a fresh list+subscribe cycle and replaces previous subscriptions atomically
+- [x] Tracker retries transient failures (e.g., network) with exponential backoff capped at 30s and surfaces errors via telemetry
+- [x] Duplicate notifications for the same resource URI within 2 seconds are de-duped to a single downstream update event
+- [x] Tracker survives MCP server restarts by re-establishing subscriptions without manual intervention
 
 ### Story 3: Realtime agent notified of content updates
 **As a** VibeChat assistant session participant
@@ -40,9 +40,9 @@ Upcoming voice workflows depend on MCP-hosted instruction packs. Without automat
 **So that** the assistant responds with the latest instructions or data without re-entry
 
 **Acceptance Criteria:**
-- [ ] When a subscribed resource fires `notifications/resources/updated`, VibeChat emits a lightweight event containing `serverId`, `resourceUri`, and a timestamp within 3 seconds of receipt
-- [ ] The realtime adapter receives the event and immediately injects a transcript message formatted as `Resource <URI> updated for MCP server <serverId> at <timestamp>` (timestamp in ISO 8601) without blocking the notification path
-- [ ] Updates are also exposed via a server-sent events (SSE) endpoint so UI components can reflect resource activity
+- [x] When a subscribed resource fires `notifications/resources/updated`, VibeChat emits a lightweight event containing `serverId`, `resourceUri`, and a timestamp within 3 seconds of receipt
+- [x] The realtime adapter receives the event and immediately injects a transcript message formatted as `Resource <URI> updated for MCP server <serverId> at <timestamp>` (timestamp in ISO 8601) without blocking the notification path
+- [x] Updates are also exposed via a server-sent events (SSE) endpoint so UI components can reflect resource activity
 
 ## Success Metrics
 How will we measure if this feature is successful?

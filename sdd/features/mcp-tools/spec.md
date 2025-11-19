@@ -18,10 +18,10 @@ Upcoming voice workflows rely on MCP integrations already being packaged on the 
 **So that** the conversation can use the right capabilities without extra setup
 
 **Acceptance Criteria:**
-- [ ] Client initiates an MCP handshake on session connect and receives the active tool catalog within 500ms
-- [ ] Tool metadata includes identifiers, input schemas, configured transport (stdio), and permission scopes needed for invocation
-- [ ] Catalog aggregates every MCP server defined in configuration so the client sees the complete tool set
-- [ ] Unauthorized or disabled tools are omitted, and errors surface via existing session diagnostics
+- [x] Client initiates an MCP handshake on session connect and receives the active tool catalog within 500ms
+- [x] Tool metadata includes identifiers, input schemas, configured transport (stdio), and permission scopes needed for invocation
+- [x] Catalog aggregates every MCP server defined in configuration so the client sees the complete tool set
+- [x] Unauthorized or disabled tools are omitted, and errors surface via existing session diagnostics
 
 ### Story 2: Invoke Tools During Conversation
 **As a** voice chat participant  
@@ -29,10 +29,10 @@ Upcoming voice workflows rely on MCP integrations already being packaged on the 
 **So that** tasks complete without me leaving the chat
 
 **Acceptance Criteria:**
-- [ ] Agent requests to run a tool are sent through MCP with validated payloads matching the advertised schema
-- [ ] Tool execution responses stream back to the agent and surface to the user within 1s median round trip
-- [ ] Failures return actionable messages (no silent drops) and log telemetry without interrupting the session
-- [ ] Tool runs respect user/session permissions before execution
+- [x] Agent requests to run a tool are sent through MCP with validated payloads matching the advertised schema
+- [x] Tool execution responses stream back to the agent and surface to the user within 1s median round trip
+- [x] Failures return actionable messages (no silent drops) and log telemetry without interrupting the session
+- [x] Tool runs respect user/session permissions before execution
 
 ### Story 3: Observe and Control Tool Usage
 **As a** support engineer  
@@ -40,9 +40,9 @@ Upcoming voice workflows rely on MCP integrations already being packaged on the 
 **So that** we maintain safety and can debug issues quickly
 
 **Acceptance Criteria:**
-- [ ] Telemetry events capture tool name, latency, outcome (success/error), and correlation ids
-- [ ] Admin or support interface exposes a kill-switch endpoint to revoke a tool mid-session
-- [ ] Revoked tools stop appearing in the catalog within 60s and active executions are cancelled gracefully
+- [x] Telemetry events capture tool name, latency, outcome (success/error), and correlation ids
+- [x] Admin or support interface exposes a kill-switch endpoint to revoke a tool mid-session
+- [x] Revoked tools stop appearing in the catalog within 60s and active executions are cancelled gracefully
 
 ### Story 4: Configure MCP Servers
 **As a** platform engineer  
@@ -50,9 +50,9 @@ Upcoming voice workflows rely on MCP integrations already being packaged on the 
 **So that** the backend can launch tool hosts consistently across environments
 
 **Acceptance Criteria:**
-- [ ] Config file lists each MCP server as a shell command with arguments; stdio transport is the only supported mode initially
-- [ ] Backend loads the config at startup, validates entries, and surfaces misconfigurations via deployment logs
-- [ ] Any server enabled in the config becomes available to connected clients without requiring redeploys
+- [x] Config file lists each MCP server as a shell command with arguments; stdio transport is the only supported mode initially
+- [x] Backend loads the config at startup, validates entries, and surfaces misconfigurations via deployment logs
+- [x] Any server enabled in the config becomes available to connected clients without requiring redeploys
 
 ## Success Metrics
 How will we measure if this feature is successful?
