@@ -42,6 +42,22 @@ issuance so guidance never ships with the client bundle.
 
 ---
 
+### [x] main-view-visualisation-markdown
+Render agent Markdown (tables & math) in the main view with telemetry and accessibility guardrails.
+- **Priority:** Medium
+- **Dependencies:** ui-overhaul, ui-streamlining-and-cleanup
+- **Notes:** Tasks T001–T004 completed; GitHub issue #61 closed 2025-11-18 after Markdown E2E validation.
+
+---
+
+### [x] mcp-resources-tracking
+Track MCP server resources, stream update events via SSE, and surface notifications in realtime sessions.
+- **Priority:** High
+- **Dependencies:** mcp-tools
+- **Notes:** Tasks T001–T005 landed on `main`; GitHub issues #66–#70 closed 2025-11-18 after tracker + SSE validation.
+
+---
+
 **Recommended Starting Point:**
 1. Replace example-feature with your first real feature
 2. Run `/prompts:sdd-spec <feature-name>` to create specification

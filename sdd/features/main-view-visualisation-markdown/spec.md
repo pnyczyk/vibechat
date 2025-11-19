@@ -18,9 +18,9 @@ Voice and chat sessions increasingly rely on structured agent output. Delivering
 **So that** I immediately understand structured guidance without switching contexts
 
 **Acceptance Criteria:**
-- [ ] When the realtime agent emits Markdown content, the main view tool renders headings, lists, inline formatting, and code blocks with styling that matches design tokens.
-- [ ] Rendering completes within 200 ms after the agent payload is received, preserving conversation scroll position.
-- [ ] Telemetry logs a `session_markdown_rendered` event with payload size and render latency for every successful render.
+- [x] When the realtime agent emits Markdown content, the main view tool renders headings, lists, inline formatting, and code blocks with styling that matches design tokens.
+- [x] Rendering completes within 200 ms after the agent payload is received, preserving conversation scroll position.
+- [x] Telemetry logs a `session_markdown_rendered` event with payload size and render latency for every successful render.
 
 ### Story 2: Support complex Markdown layout basics
 **As a** VibeChat participant handling detailed outputs
@@ -28,9 +28,9 @@ Voice and chat sessions increasingly rely on structured agent output. Delivering
 **So that** I can act on structured data inside the session window
 
 **Acceptance Criteria:**
-- [ ] Tables render with header emphasis, responsive column widths, and horizontal scrolling when width exceeds viewport.
-- [ ] LaTeX-style math blocks render via the existing math renderer with accessible fallback text.
-- [ ] The viewer allows vertical scrolling independent from chat history and indicates overflow with a visual affordance.
+- [x] Tables render with header emphasis, responsive column widths, and horizontal scrolling when width exceeds viewport.
+- [x] LaTeX-style math blocks render via the existing math renderer with accessible fallback text.
+- [x] The viewer allows vertical scrolling independent from chat history and indicates overflow with a visual affordance.
 
 ## Success Metrics
 How will we measure if this feature is successful?
